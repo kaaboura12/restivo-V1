@@ -44,6 +44,7 @@ export function RestaurantSidebar() {
     currentRestaurant,
     setCurrentRestaurant,
     setIsAddRestaurantOpen,
+    openRestaurantProfile,
     activeNavTab,
     setActiveNavTab,
     mobileMenuOpen,
@@ -95,14 +96,16 @@ export function RestaurantSidebar() {
           </button>
         </div>
 
-        {/* Restaurant Switcher Card */}
+        {/* Restaurant Switcher & Profile Card */}
         <div className="relative">
-          <button
-            type="button"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="w-full flex items-center justify-between gap-2.5 p-2 rounded-2xl bg-white/70 hover:bg-white border border-[#E9E3D8] hover:border-[#DED5C7] shadow-2xs transition-all text-left group"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-full flex items-center justify-between gap-1 p-1.5 rounded-2xl bg-white/70 hover:bg-white border border-[#E9E3D8] hover:border-[#DED5C7] shadow-2xs transition-all group">
+            {/* Click restaurant name/info to open its Restaurant Profile */}
+            <button
+              type="button"
+              onClick={() => openRestaurantProfile(currentRestaurant)}
+              className="flex items-center gap-2.5 min-w-0 flex-1 p-1 text-left rounded-xl hover:bg-[#FAF7F2] transition-colors"
+              title="Click to view Restaurant Profile"
+            >
               <div className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0 border border-[#E2DDD3] shadow-2xs">
                 {currentRestaurant ? (
                   <Image
@@ -119,8 +122,11 @@ export function RestaurantSidebar() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] font-bold text-[#1A1A1A] truncate block">
+                  <span className="text-[13px] font-bold text-[#1A1A1A] truncate block group-hover:text-[#B55234] transition-colors">
                     {currentRestaurant?.name ?? "Add a restaurant"}
+                  </span>
+                  <span className="text-[10px] text-[#B55234] opacity-70 group-hover:opacity-100 transition-opacity">
+                    ↗
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -134,39 +140,53 @@ export function RestaurantSidebar() {
                   )}
                 </div>
               </div>
-            </div>
+            </button>
 
-            <ChevronDown
-              className={`w-3.5 h-3.5 text-[#8A847C] group-hover:text-[#1A1A1A] transition-transform duration-200 shrink-0 ${
-                dropdownOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+            {/* Chevron button to open venue switcher dropdown */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdownOpen(!dropdownOpen);
+              }}
+              className="p-1.5 rounded-lg hover:bg-black/5 text-[#8A847C] hover:text-[#1A1A1A] transition-colors"
+              title="Switch restaurant"
+            >
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  dropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          </div>
 
           {/* Restaurant Switcher Dropdown */}
           {dropdownOpen && (
             <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-2xl border border-[#E5DEC9] shadow-xl p-2 z-40 animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#8C857B]">
-                Your Managed Restaurants
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#8C857B] flex items-center justify-between">
+                <span>Managed Venues</span>
+                <span className="text-[9px] text-[#B55234] font-medium">Click name to switch</span>
               </div>
 
-              <div className="flex flex-col gap-1 my-1 max-h-48 overflow-y-auto">
+              <div className="flex flex-col gap-1 my-1 max-h-52 overflow-y-auto">
                 {restaurants.map((rest) => {
                   const isSelected = rest.id === currentRestaurant?.id;
                   return (
-                    <button
+                    <div
                       key={rest.id}
-                      onClick={() => {
-                        setCurrentRestaurant(rest);
-                        setDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-colors ${
+                      className={`w-full flex items-center justify-between p-1.5 rounded-xl text-left text-xs transition-colors ${
                         isSelected
                           ? "bg-[#FAF0EA] text-[#B55234] font-semibold"
                           : "hover:bg-[#FAF7F2] text-[#2C2926]"
                       }`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
+                      <button
+                        onClick={() => {
+                          setCurrentRestaurant(rest);
+                          setDropdownOpen(false);
+                        }}
+                        className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                      >
                         <div className="relative w-6 h-6 rounded-lg overflow-hidden shrink-0">
                           <Image
                             src={rest.image || "/images/restaurant-ambient.jpg"}
@@ -179,14 +199,43 @@ export function RestaurantSidebar() {
                           <p className="truncate font-medium">{rest.name}</p>
                           <p className="text-[10px] text-[#7A746B]">{rest.city}</p>
                         </div>
+                      </button>
+
+                      {/* Dedicated button to view every restaurant's profile */}
+                      <div className="flex items-center gap-1 shrink-0 ml-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDropdownOpen(false);
+                            openRestaurantProfile(rest);
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-white hover:bg-[#FAF0EA] text-[10px] font-bold text-[#736D65] hover:text-[#B55234] border border-[#E5DEC9] transition-colors"
+                          title={`View ${rest.name} Profile`}
+                        >
+                          Profile
+                        </button>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#B55234]" />}
                       </div>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-[#B55234] shrink-0" />}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
 
               <div className="pt-1.5 border-t border-[#EDE7DC] flex flex-col gap-1">
+                {currentRestaurant && (
+                  <button
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      openRestaurantProfile(currentRestaurant);
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-white hover:bg-[#FAF7F2] border border-[#E5DEC9] text-[#1A1A1A] text-xs font-semibold transition-colors"
+                  >
+                    <span>View {currentRestaurant.name} Profile</span>
+                    <span className="text-[#B55234]">↗</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => {
                     setDropdownOpen(false);

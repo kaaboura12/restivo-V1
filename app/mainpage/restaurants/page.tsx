@@ -28,6 +28,7 @@ export default function RestaurantDashboardPage() {
   const {
     currentRestaurant,
     setIsAddRestaurantOpen,
+    openRestaurantProfile,
     restaurantStatus,
     setRestaurantStatus,
     isLoadingRestaurants,
@@ -96,7 +97,16 @@ export default function RestaurantDashboardPage() {
             Good morning, {userName}
           </h1>
           <p className="text-xs sm:text-sm text-[#736D65] mt-1 font-normal">
-            Here&apos;s what&apos;s happening at {currentRestaurant.name} today.
+            Here&apos;s what&apos;s happening at{" "}
+            <button
+              type="button"
+              onClick={() => openRestaurantProfile(currentRestaurant)}
+              className="font-bold text-[#1A1A1A] hover:text-[#B55234] underline decoration-dotted underline-offset-2 transition-colors cursor-pointer"
+              title="Click to view Restaurant Profile"
+            >
+              {currentRestaurant.name}
+            </button>{" "}
+            today.
           </p>
 
           {/* Status & Date Bar Pill */}

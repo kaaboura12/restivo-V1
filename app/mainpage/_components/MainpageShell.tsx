@@ -14,6 +14,7 @@ import { RestaurantSidebar } from "../restaurants/_components/RestaurantSidebar"
 import { RestaurantTopNav } from "../restaurants/_components/RestaurantTopNav";
 import { RestaurantManagerProvider } from "../restaurants/_context/RestaurantManagerContext";
 import { AddRestaurantModal } from "../restaurants/_components/AddRestaurantModal";
+import { RestaurantProfileModal } from "../restaurants/_components/RestaurantProfileModal";
 
 export function MainpageShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -47,7 +48,12 @@ export function MainpageShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </div>
-      {isRestaurantRoute && <AddRestaurantModal />}
+      {isRestaurantRoute && (
+        <>
+          <AddRestaurantModal />
+          <RestaurantProfileModal />
+        </>
+      )}
     </div>
   );
 

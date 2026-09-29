@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
+  Store,
 } from "lucide-react";
 import { useRestaurantManager } from "../_context/RestaurantManagerContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,7 @@ export function RestaurantTopNav() {
     searchQuery,
     setSearchQuery,
     setIsAddRestaurantOpen,
+    openRestaurantProfile,
   } = useRestaurantManager();
   const { user } = useAuth();
 
@@ -52,15 +54,16 @@ export function RestaurantTopNav() {
 
         {/* Breadcrumb matching image: "🏠 Maison Olive / Overview" */}
         <div className="flex items-center gap-2 text-xs sm:text-[13px] text-[#736D65] font-medium">
-          <Link
-            href="/mainpage"
+          <button
+            onClick={() => openRestaurantProfile(currentRestaurant)}
             className="flex items-center gap-1.5 hover:text-[#B55234] transition-colors"
+            title="Click to view Restaurant Profile"
           >
-            <Home className="w-3.5 h-3.5" />
-            <span className="font-semibold text-[#1A1A1A]">
+            <Home className="w-3.5 h-3.5 text-[#B55234]" />
+            <span className="font-semibold text-[#1A1A1A] hover:underline underline-offset-2">
               {currentRestaurant?.name ?? "Your restaurant"}
             </span>
-          </Link>
+          </button>
           <span className="text-[#A39C91]">/</span>
           <span className="text-[#736D65]">Overview</span>
         </div>
@@ -170,6 +173,17 @@ export function RestaurantTopNav() {
                 <p className="text-xs font-bold text-[#1A1A1A]">{userName}</p>
                 <p className="text-[10px] text-[#7A746B]">Restaurant Administrator</p>
               </div>
+
+              <button
+                onClick={() => {
+                  setProfileDropdownOpen(false);
+                  openRestaurantProfile(currentRestaurant);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-[#1A1A1A] hover:bg-[#FAF7F2] font-semibold text-left"
+              >
+                <Store className="w-3.5 h-3.5 text-[#B55234]" />
+                <span>Restaurant Profile</span>
+              </button>
 
               <button
                 onClick={() => {
