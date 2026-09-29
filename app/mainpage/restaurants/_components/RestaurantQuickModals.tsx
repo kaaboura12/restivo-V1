@@ -351,7 +351,7 @@ export function RestaurantQuickModals({
           <div className="flex items-center justify-between pb-3 border-b border-[#ECE7DC] mb-4">
             <div className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-[#B55234]" />
-              <h3 className="font-bold text-[#1A1A1A]">Manage {currentRestaurant.name}</h3>
+              <h3 className="font-bold text-[#1A1A1A]">Manage {currentRestaurant?.name ?? "restaurant"}</h3>
             </div>
             <button onClick={() => setManageOpen(false)} className="p-1 rounded-full hover:bg-black/5">
               <X className="w-5 h-5 text-[#6B6661]" />
@@ -379,9 +379,9 @@ export function RestaurantQuickModals({
             </div>
 
             <div className="p-3 bg-white rounded-xl border border-[#DFD8CC] space-y-1.5 text-[#5C564E]">
-              <p>📍 Location: <span className="font-semibold text-[#1A1A1A]">{currentRestaurant.location}</span></p>
-              <p>🪑 Total Tables: <span className="font-semibold text-[#1A1A1A]">{currentRestaurant.tablesCount}</span></p>
-              <p>👥 Seating Capacity: <span className="font-semibold text-[#1A1A1A]">{currentRestaurant.capacity} seats</span></p>
+              <p>📍 Location: <span className="font-semibold text-[#1A1A1A]">{currentRestaurant?.location ?? "—"}</span></p>
+              <p>🪑 Total Tables: <span className="font-semibold text-[#1A1A1A]">{currentRestaurant?.tablesCount ?? 0}</span></p>
+              <p>👥 Seating Capacity: <span className="font-semibold text-[#1A1A1A]">{currentRestaurant?.capacity ?? 0} seats</span></p>
             </div>
 
             <div className="pt-2 flex justify-end">
@@ -409,7 +409,7 @@ export function RestaurantQuickModals({
               <Maximize2 className="w-5 h-5 text-[#B55234]" />
               <div>
                 <h3 className="font-bold text-base text-[#1A1A1A]">
-                  Full Floor Plan — {currentRestaurant.name}
+                  Full Floor Plan — {currentRestaurant?.name ?? "restaurant"}
                 </h3>
                 <p className="text-xs text-[#7A746B]">
                   Live interactive table management with real-time seating updates

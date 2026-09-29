@@ -57,7 +57,9 @@ export function RestaurantTopNav() {
             className="flex items-center gap-1.5 hover:text-[#B55234] transition-colors"
           >
             <Home className="w-3.5 h-3.5" />
-            <span className="font-semibold text-[#1A1A1A]">{currentRestaurant.name}</span>
+            <span className="font-semibold text-[#1A1A1A]">
+              {currentRestaurant?.name ?? "Your restaurant"}
+            </span>
           </Link>
           <span className="text-[#A39C91]">/</span>
           <span className="text-[#736D65]">Overview</span>

@@ -104,26 +104,34 @@ export function RestaurantSidebar() {
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0 border border-[#E2DDD3] shadow-2xs">
-                <Image
-                  src={currentRestaurant.image || "/images/restaurant-ambient.jpg"}
-                  alt={currentRestaurant.name}
-                  fill
-                  className="object-cover"
-                />
+                {currentRestaurant ? (
+                  <Image
+                    src={currentRestaurant.image || "/images/restaurant-ambient.jpg"}
+                    alt={currentRestaurant.name}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[#FAF0EA] flex items-center justify-center">
+                    <Store className="w-4 h-4 text-[#B55234]" />
+                  </div>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px] font-bold text-[#1A1A1A] truncate block">
-                    {currentRestaurant.name}
+                    {currentRestaurant?.name ?? "Add a restaurant"}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[11px] text-[#78726A] truncate">
-                    {currentRestaurant.location}
+                    {currentRestaurant?.location ?? "No venue yet"}
                   </span>
-                  <span className="inline-block px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-[#FAF0EA] text-[#B55234] border border-[#F3DFD4]">
-                    {currentRestaurant.role}
-                  </span>
+                  {currentRestaurant && (
+                    <span className="inline-block px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-[#FAF0EA] text-[#B55234] border border-[#F3DFD4]">
+                      {currentRestaurant.role}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -144,7 +152,7 @@ export function RestaurantSidebar() {
 
               <div className="flex flex-col gap-1 my-1 max-h-48 overflow-y-auto">
                 {restaurants.map((rest) => {
-                  const isSelected = rest.id === currentRestaurant.id;
+                  const isSelected = rest.id === currentRestaurant?.id;
                   return (
                     <button
                       key={rest.id}

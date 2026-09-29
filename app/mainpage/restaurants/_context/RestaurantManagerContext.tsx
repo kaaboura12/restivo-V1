@@ -1,6 +1,16 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiListRestaurants } from "@/lib/restaurants/client";
+import type { PublicRestaurant } from "@/lib/restaurants/serialize";
 
 export interface ManagedRestaurant {
   id: string;
@@ -15,58 +25,40 @@ export interface ManagedRestaurant {
   capacity: number;
   floorsCount: number;
   rating: number;
+  slug: string;
+  dbStatus: PublicRestaurant["status"];
 }
 
-export const INITIAL_RESTAURANTS: ManagedRestaurant[] = [
-  {
-    id: "maison-olive",
-    name: "Maison Olive",
-    location: "Tunis, Tunisia",
-    city: "Tunis",
-    cuisine: "Tunisian & Mediterranean",
-    role: "Owner",
-    status: "Open",
-    image: "/images/restaurant-ambient.jpg",
-    tablesCount: 24,
-    capacity: 96,
-    floorsCount: 2,
-    rating: 4.8,
-  },
-  {
-    id: "dar-el-marsa",
-    name: "Dar El Marsa",
-    location: "La Marsa, Tunis",
-    city: "La Marsa",
-    cuisine: "Seafood & Mediterranean",
-    role: "Owner",
-    status: "Open",
-    image: "/images/dar-el-marsa.jpg",
-    tablesCount: 18,
-    capacity: 72,
-    floorsCount: 1,
-    rating: 4.6,
-  },
-  {
-    id: "le-comptoir",
-    name: "Le Comptoir",
-    location: "Centre Ville, Tunis",
-    city: "Tunis",
-    cuisine: "French & Fine Dining",
-    role: "Manager",
-    status: "Open",
-    image: "/images/le-comptoir.jpg",
-    tablesCount: 30,
-    capacity: 110,
-    floorsCount: 2,
-    rating: 4.7,
-  },
-];
+export function toManagedRestaurant(row: PublicRestaurant): ManagedRestaurant {
+  const location =
+    [row.address, row.city, row.country].filter(Boolean).join(", ") ||
+    row.city ||
+    "Location not set";
+
+  return {
+    id: row.id,
+    name: row.name,
+    location,
+    city: row.city ?? "",
+    cuisine: row.description?.slice(0, 48) || "Restaurant",
+    role: row.role === "OWNER" ? "Owner" : "Manager",
+    status: row.status === "ACTIVE" ? "Open" : "Closed",
+    image: row.coverUrl || "/images/restaurant-ambient.jpg",
+    tablesCount: row.tablesCount,
+    capacity: row.capacity,
+    floorsCount: row.floorsCount,
+    rating: 0,
+    slug: row.slug,
+    dbStatus: row.status,
+  };
+}
 
 interface RestaurantManagerContextType {
   restaurants: ManagedRestaurant[];
-  currentRestaurant: ManagedRestaurant;
+  currentRestaurant: ManagedRestaurant | null;
   setCurrentRestaurant: (rest: ManagedRestaurant) => void;
-  addRestaurant: (newRest: Omit<ManagedRestaurant, "id" | "role" | "rating">) => void;
+  upsertRestaurant: (rest: ManagedRestaurant) => void;
+  isLoadingRestaurants: boolean;
   isAddRestaurantOpen: boolean;
   setIsAddRestaurantOpen: (open: boolean) => void;
   mobileMenuOpen: boolean;
@@ -81,25 +73,87 @@ interface RestaurantManagerContextType {
 
 const RestaurantManagerContext = createContext<RestaurantManagerContextType | null>(null);
 
+const EMPTY: RestaurantManagerContextType = {
+  restaurants: [],
+  currentRestaurant: null,
+  setCurrentRestaurant: () => {},
+  upsertRestaurant: () => {},
+  isLoadingRestaurants: false,
+  isAddRestaurantOpen: false,
+  setIsAddRestaurantOpen: () => {},
+  mobileMenuOpen: false,
+  setMobileMenuOpen: () => {},
+  activeNavTab: "overview",
+  setActiveNavTab: () => {},
+  searchQuery: "",
+  setSearchQuery: () => {},
+  restaurantStatus: "Open",
+  setRestaurantStatus: () => {},
+};
+
 export function RestaurantManagerProvider({ children }: { children: React.ReactNode }) {
-  const [restaurants, setRestaurants] = useState<ManagedRestaurant[]>(INITIAL_RESTAURANTS);
-  const [currentRestaurant, setCurrentRestaurant] = useState<ManagedRestaurant>(INITIAL_RESTAURANTS[0]);
+  const { user, isReady, getAccessToken } = useAuth();
+  const [restaurants, setRestaurants] = useState<ManagedRestaurant[]>([]);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true);
   const [isAddRestaurantOpen, setIsAddRestaurantOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeNavTab, setActiveNavTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurantStatus, setRestaurantStatus] = useState<"Open" | "Closed" | "Break">("Open");
 
-  const addRestaurant = (newRestData: Omit<ManagedRestaurant, "id" | "role" | "rating">) => {
-    const newRest: ManagedRestaurant = {
-      ...newRestData,
-      id: `rest-${Date.now()}`,
-      role: "Owner",
-      rating: 5.0,
+  const currentRestaurant = useMemo(
+    () => restaurants.find((row) => row.id === currentId) ?? restaurants[0] ?? null,
+    [restaurants, currentId]
+  );
+
+  useEffect(() => {
+    if (!isReady) return;
+    if (!user?.canManageRestaurants) {
+      setRestaurants([]);
+      setIsLoadingRestaurants(false);
+      return;
+    }
+
+    const token = getAccessToken();
+    if (!token) {
+      setIsLoadingRestaurants(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingRestaurants(true);
+
+    apiListRestaurants(token)
+      .then((rows) => {
+        if (cancelled) return;
+        const mapped = rows.map(toManagedRestaurant);
+        setRestaurants(mapped);
+        setCurrentId((prev) => {
+          if (prev && mapped.some((row) => row.id === prev)) return prev;
+          return mapped[0]?.id ?? null;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setRestaurants([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingRestaurants(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
-    setRestaurants((prev) => [newRest, ...prev]);
-    setCurrentRestaurant(newRest);
-  };
+  }, [isReady, user?.canManageRestaurants, user?.id, getAccessToken]);
+
+  const setCurrentRestaurant = useCallback((rest: ManagedRestaurant) => {
+    setCurrentId(rest.id);
+  }, []);
+
+  const upsertRestaurant = useCallback((rest: ManagedRestaurant) => {
+    setRestaurants((prev) => [rest, ...prev.filter((row) => row.id !== rest.id)]);
+    setCurrentId(rest.id);
+  }, []);
 
   return (
     <RestaurantManagerContext.Provider
@@ -107,7 +161,8 @@ export function RestaurantManagerProvider({ children }: { children: React.ReactN
         restaurants,
         currentRestaurant,
         setCurrentRestaurant,
-        addRestaurant,
+        upsertRestaurant,
+        isLoadingRestaurants,
         isAddRestaurantOpen,
         setIsAddRestaurantOpen,
         mobileMenuOpen,
@@ -127,24 +182,5 @@ export function RestaurantManagerProvider({ children }: { children: React.ReactN
 
 export function useRestaurantManager() {
   const ctx = useContext(RestaurantManagerContext);
-  if (!ctx) {
-    // Graceful fallback if rendered outside provider
-    return {
-      restaurants: INITIAL_RESTAURANTS,
-      currentRestaurant: INITIAL_RESTAURANTS[0],
-      setCurrentRestaurant: () => {},
-      addRestaurant: () => {},
-      isAddRestaurantOpen: false,
-      setIsAddRestaurantOpen: () => {},
-      mobileMenuOpen: false,
-      setMobileMenuOpen: () => {},
-      activeNavTab: "overview",
-      setActiveNavTab: () => {},
-      searchQuery: "",
-      setSearchQuery: () => {},
-      restaurantStatus: "Open" as const,
-      setRestaurantStatus: () => {},
-    };
-  }
-  return ctx;
+  return ctx ?? EMPTY;
 }

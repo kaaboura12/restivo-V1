@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CalendarDays,
   PlusCircle,
@@ -22,6 +22,7 @@ import { RecentActivityWidget } from "./_components/RecentActivityWidget";
 import { RestaurantQuickModals } from "./_components/RestaurantQuickModals";
 import { useRestaurantManager } from "./_context/RestaurantManagerContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function RestaurantDashboardPage() {
   const {
@@ -29,10 +30,16 @@ export default function RestaurantDashboardPage() {
     setIsAddRestaurantOpen,
     restaurantStatus,
     setRestaurantStatus,
-    activeNavTab,
+    isLoadingRestaurants,
   } = useRestaurantManager();
 
-  const { user } = useAuth();
+  const { user, isReady } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isReady) return;
+    if (!user?.canManageRestaurants) router.replace("/mainpage");
+  }, [isReady, user?.canManageRestaurants, router]);
 
   // Quick Action Modal states
   const [reservationModalOpen, setReservationModalOpen] = useState(false);
@@ -48,7 +55,37 @@ export default function RestaurantDashboardPage() {
   const userName =
     user?.displayName ||
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-    "Ahmed";
+    "there";
+
+  if (!isReady || isLoadingRestaurants) {
+    return (
+      <div className="flex items-center justify-center py-24 text-sm text-[#7A746B]">
+        Loading your restaurants…
+      </div>
+    );
+  }
+
+  if (!currentRestaurant) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-20 px-4">
+        <div className="w-14 h-14 rounded-2xl bg-[#FAF0EA] text-[#B55234] flex items-center justify-center mb-4">
+          <Store className="w-7 h-7" />
+        </div>
+        <h1 className="text-2xl font-extrabold text-[#1A1A1A]">Create your first restaurant</h1>
+        <p className="text-sm text-[#736D65] mt-2 max-w-md">
+          Owners and managers start here. Add a venue, set hours, and we&apos;ll create the first
+          floor for your table map.
+        </p>
+        <button
+          onClick={() => setIsAddRestaurantOpen(true)}
+          className="mt-5 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#B55234] hover:bg-[#9E4328] text-white text-sm font-bold"
+        >
+          <Plus className="w-4 h-4" strokeWidth={2.5} />
+          Add a restaurant
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 py-1 select-none animate-in fade-in duration-300">
