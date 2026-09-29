@@ -141,3 +141,29 @@ export async function apiMe(accessToken: string): Promise<AuthUserFull> {
   const json = await handleResponse<{ user: AuthUserFull }>(res);
   return json.user;
 }
+
+export interface UpdateProfileInput {
+  firstName: string;
+  lastName: string;
+  displayName?: string;
+  phone?: string;
+  bio?: string;
+}
+
+/** Persist profile fields (names, phone, dining note). */
+export async function apiUpdateProfile(
+  accessToken: string,
+  input: UpdateProfileInput
+): Promise<AuthUserFull> {
+  const res = await fetch("/api/auth/profile", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const json = await handleResponse<{ user: AuthUserFull }>(res);
+  return json.user;
+}

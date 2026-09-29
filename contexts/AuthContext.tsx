@@ -29,11 +29,14 @@ import {
   apiSignIn,
   apiSignOut,
   apiSignUp,
+  apiUpdateProfile,
   hasSessionHint,
   type AuthUser,
+  type AuthUserFull,
   type SignInInput,
   type SignUpInput,
   type SignUpRole,
+  type UpdateProfileInput,
 } from "@/lib/auth/client";
 
 // ─── Context shape ────────────────────────────────────────────────────────────
@@ -48,6 +51,7 @@ interface AuthContextValue {
   signIn: (input: SignInInput) => Promise<void>;
   signUp: (input: SignUpInput) => Promise<{ role: SignUpRole }>;
   signOut: () => Promise<void>;
+  updateProfile: (input: UpdateProfileInput) => Promise<AuthUserFull>;
   /** Returns the current in-memory access token (may be null). */
   getAccessToken: () => string | null;
 }
@@ -142,13 +146,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await apiSignOut().catch(() => {}); // best-effort – clear cookie server-side
   }, []);
 
+  const updateProfile = useCallback(
+    async (input: UpdateProfileInput): Promise<AuthUserFull> => {
+      const token = tokenRef.current;
+      if (!token) {
+        throw new ApiError("MISSING_TOKEN", "Please sign in again.", 401);
+      }
+      const me = await apiUpdateProfile(token, input);
+      setUser({
+        id: me.id,
+        email: me.email,
+        firstName: me.firstName,
+        lastName: me.lastName,
+        displayName: me.displayName,
+        avatarUrl: me.avatarUrl,
+      });
+      return me;
+    },
+    []
+  );
+
   // ── Accessor for the raw token ────────────────────────────────────────────
 
   const getAccessToken = useCallback((): string | null => tokenRef.current, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, isReady, signIn, signUp, signOut, getAccessToken }}
+      value={{ user, isLoading, isReady, signIn, signUp, signOut, updateProfile, getAccessToken }}
     >
       {children}
     </AuthContext.Provider>

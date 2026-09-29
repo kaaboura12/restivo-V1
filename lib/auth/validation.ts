@@ -49,6 +49,28 @@ export const signInSchema = z.object({
 
 export type SignInBody = z.infer<typeof signInSchema>;
 
+// ─── Profile update ──────────────────────────────────────────────────────────
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1, "First name is required.").max(80).trim(),
+  lastName: z.string().min(1, "Last name is required.").max(80).trim(),
+  displayName: z.string().max(80).trim().optional(),
+  phone: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "" || /^\+?[\d\s\-().]{7,20}$/.test(value),
+      "Please enter a valid phone number."
+    )
+    .optional(),
+  bio: z
+    .string()
+    .max(280, "Keep this note under 280 characters.")
+    .optional(),
+});
+
+export type UpdateProfileBody = z.infer<typeof updateProfileSchema>;
+
 // ─── Parse helper ─────────────────────────────────────────────────────────────
 
 /**

@@ -12,25 +12,14 @@
  */
 import { db } from "@/lib/db";
 import { AuthError, toErrorResponse } from "@/lib/auth/errors";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { requireUserId } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    // ── 1. Extract Bearer token ────────────────────────────────────────────
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      throw new AuthError("MISSING_TOKEN");
-    }
-    const token = authHeader.slice(7).trim();
-    if (!token) throw new AuthError("MISSING_TOKEN");
+    const userId = await requireUserId(request);
 
-    // ── 2. Verify token ────────────────────────────────────────────────────
-    const payload = await verifyAccessToken(token);
-    const userId = payload.sub!;
-
-    // ── 3. Load current user + profile ────────────────────────────────────
     const [user, profile] = await Promise.all([
       db.orm.public.User.where({ id: userId }).first(),
       db.orm.public.Profile.where({ userId }).first(),
@@ -40,7 +29,6 @@ export async function GET(request: Request): Promise<Response> {
     if (user.status === "SUSPENDED") throw new AuthError("USER_SUSPENDED");
     if (user.status === "DELETED") throw new AuthError("USER_DELETED");
 
-    // ── 4. Respond ─────────────────────────────────────────────────────────
     return Response.json({
       ok: true,
       user: {

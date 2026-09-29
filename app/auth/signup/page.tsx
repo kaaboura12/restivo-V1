@@ -198,7 +198,7 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      const { role } = await signUp({
+      await signUp({
         email,
         password,
         firstName,
@@ -207,14 +207,8 @@ export default function SignUpPage() {
         role: selectedRole,
       });
 
-      // Route new users to the appropriate onboarding flow
-      if (role === "owner") {
-        router.push("/homepage"); // TODO: replace with /onboarding/restaurant
-      } else if (role === "staff") {
-        router.push("/homepage"); // TODO: replace with /onboarding/join
-      } else {
-        router.push("/homepage");
-      }
+      // Route new users into the app
+      router.push("/mainpage");
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError) {

@@ -26,7 +26,7 @@ export default function SignInPage() {
 
     try {
       await signIn({ email, password });
-      router.push("/homepage");
+      router.push("/mainpage");
       router.refresh(); // ensure server components re-render with new session
     } catch (err) {
       if (err instanceof ApiError) {
