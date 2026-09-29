@@ -102,6 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastName: me.lastName,
           displayName: me.displayName,
           avatarUrl: me.avatarUrl,
+          canManageRestaurants: me.canManageRestaurants,
+          managementRole: me.managementRole,
         });
       } catch {
         // No valid session – leave user as null, silently.
@@ -160,6 +162,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastName: me.lastName,
         displayName: me.displayName,
         avatarUrl: me.avatarUrl,
+        canManageRestaurants: me.canManageRestaurants,
+        managementRole: me.managementRole,
       });
       return me;
     },

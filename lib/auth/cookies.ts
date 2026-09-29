@@ -1,11 +1,13 @@
 /**
  * Cookie helpers for the auth refresh token.
  *
- * All cookie manipulation goes through Next.js's `cookies()` (from
- * `next/headers`), which is async in Next.js 15 / 16.  Helpers here isolate
- * cookie options so they are consistent across every route handler.
+ * Writes go on a `NextResponse` so `Set-Cookie` actually lands on the
+ * outgoing response.  `cookies().set()` + `Response.json()` drops the
+ * header in App Router route handlers — the client then keeps a stale
+ * session while in-memory auth (navbar) is already the new user.
  */
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import {
   REFRESH_COOKIE_NAME,
   REFRESH_TOKEN_MAX_AGE_S,
@@ -19,24 +21,30 @@ const cookieBase = {
   sameSite: "lax" as const,
   maxAge: REFRESH_TOKEN_MAX_AGE_S,
   path: "/",
-};
+} as const;
 
-/** Writes the refresh token (httpOnly) plus a JS-readable session hint. */
-export async function setRefreshTokenCookie(token: string): Promise<void> {
-  const jar = await cookies();
-  jar.set(REFRESH_COOKIE_NAME, token, { ...cookieBase, httpOnly: true });
-  jar.set(SESSION_HINT_COOKIE_NAME, "1", { ...cookieBase, httpOnly: false });
+export function applyRefreshTokenCookie(response: NextResponse, token: string): NextResponse {
+  response.cookies.set(REFRESH_COOKIE_NAME, token, { ...cookieBase, httpOnly: true });
+  response.cookies.set(SESSION_HINT_COOKIE_NAME, "1", { ...cookieBase, httpOnly: false });
+  return response;
+}
+
+export function applyClearedRefreshCookies(response: NextResponse): NextResponse {
+  response.cookies.delete(REFRESH_COOKIE_NAME);
+  response.cookies.delete(SESSION_HINT_COOKIE_NAME);
+  return response;
+}
+
+export function jsonWithRefreshCookie(
+  body: unknown,
+  token: string,
+  status = 200
+): NextResponse {
+  return applyRefreshTokenCookie(NextResponse.json(body, { status }), token);
 }
 
 /** Reads the refresh token from the cookie jar. Returns `null` if absent. */
 export async function getRefreshTokenCookie(): Promise<string | null> {
   const jar = await cookies();
   return jar.get(REFRESH_COOKIE_NAME)?.value ?? null;
-}
-
-/** Clears the refresh token cookie and the session hint (used on sign-out). */
-export async function clearRefreshTokenCookie(): Promise<void> {
-  const jar = await cookies();
-  jar.delete(REFRESH_COOKIE_NAME);
-  jar.delete(SESSION_HINT_COOKIE_NAME);
 }

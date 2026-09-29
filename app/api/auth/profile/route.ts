@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { AuthError, toErrorResponse } from "@/lib/auth/errors";
 import { requireUserId } from "@/lib/auth/session";
 import { parseBody, updateProfileSchema } from "@/lib/auth/validation";
+import { toAuthUser } from "@/lib/auth/public-user";
 
 export const dynamic = "force-dynamic";
 
@@ -54,14 +55,9 @@ export async function PATCH(request: Request): Promise<Response> {
     return Response.json({
       ok: true,
       user: {
-        id: user.id,
-        email: user.email,
+        ...(await toAuthUser(user, profile)),
         status: user.status,
         emailVerifiedAt: user.emailVerifiedAt ?? null,
-        firstName: profile?.firstName ?? firstName,
-        lastName: profile?.lastName ?? lastName,
-        displayName: profile?.displayName ?? displayName,
-        avatarUrl: profile?.avatarUrl ?? null,
         phone: profile?.phone ?? phone,
         bio: profile?.bio ?? bio,
         createdAt: user.createdAt,

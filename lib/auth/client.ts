@@ -19,6 +19,8 @@ export interface AuthUser {
   lastName: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  canManageRestaurants: boolean;
+  managementRole: "OWNER" | "MANAGER" | null;
 }
 
 export interface AuthUserFull extends AuthUser {

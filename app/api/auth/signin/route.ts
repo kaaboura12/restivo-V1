@@ -18,8 +18,9 @@ import { db } from "@/lib/db";
 import { AuthError, toErrorResponse } from "@/lib/auth/errors";
 import { signAccessToken, signRefreshToken } from "@/lib/auth/jwt";
 import { verifyPassword } from "@/lib/auth/password";
-import { setRefreshTokenCookie } from "@/lib/auth/cookies";
+import { jsonWithRefreshCookie } from "@/lib/auth/cookies";
 import { parseBody, signInSchema } from "@/lib/auth/validation";
+import { toAuthUser } from "@/lib/auth/public-user";
 
 export const dynamic = "force-dynamic";
 
@@ -51,22 +52,14 @@ export async function POST(request: Request): Promise<Response> {
       signRefreshToken(user.id),
     ]);
 
-    // ── 7. Set httpOnly refresh cookie ─────────────────────────────────────
-    await setRefreshTokenCookie(refreshToken);
-
-    // ── 8. Respond ─────────────────────────────────────────────────────────
-    return Response.json({
-      ok: true,
-      accessToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: profile?.firstName ?? null,
-        lastName: profile?.lastName ?? null,
-        displayName: profile?.displayName ?? null,
-        avatarUrl: profile?.avatarUrl ?? null,
+    return jsonWithRefreshCookie(
+      {
+        ok: true,
+        accessToken,
+        user: await toAuthUser(user, profile),
       },
-    });
+      refreshToken
+    );
   } catch (err) {
     return toErrorResponse(err);
   }

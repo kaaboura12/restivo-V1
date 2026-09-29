@@ -3810,6 +3810,19 @@
                   "kind": "scalar"
                 }
               },
+              "managementRole": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "MembershipRole",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "passwordHash": {
                 "nullable": false,
                 "type": {
@@ -4019,6 +4032,9 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "managementRole": {
+                  "column": "managementRole"
                 },
                 "passwordHash": {
                   "column": "passwordHash"
@@ -6902,6 +6918,11 @@
             "User": {
               "checks": [
                 {
+                  "expression": "\"managementRole\" IN ('OWNER', 'MANAGER', 'STAFF')",
+                  "name": "User_managementRole_check_4a97af3b",
+                  "prefix": "User_managementRole_check"
+                },
+                {
                   "expression": "\"status\" IN ('ACTIVE', 'SUSPENDED', 'DELETED')",
                   "name": "User_status_check_3a7c0f48",
                   "prefix": "User_status_check"
@@ -6932,6 +6953,17 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "managementRole": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "MembershipRole",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
                 "passwordHash": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -6960,6 +6992,14 @@
               },
               "foreignKeys": [],
               "indexes": [
+                {
+                  "columns": [
+                    "managementRole"
+                  ],
+                  "name": "User_managementRole_idx_5c6a53b9",
+                  "prefix": "User_managementRole_idx",
+                  "unique": false
+                },
                 {
                   "columns": [
                     "status"
@@ -7129,7 +7169,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "08e8c9f9863f4ea9487170a695bd28654048ded29da586908431d815ee015c24"
+    "storageHash": "6f4f5f79cbb2e5878045829a6aef3cdec3b443617e7b5322f93f2e8b900eeeb5"
   },
   "execution": {
     "executionHash": "aa07f03684dff45f53223e3c33d10e2b922b0f589774be74530c0b10fca568aa",

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,9 +11,13 @@ import {
   ShoppingBag,
   Heart,
   X,
+  ChevronDown,
+  UtensilsCrossed,
+  Store,
 } from "lucide-react";
 import { RestivoGlyph } from "./RestivoGlyph";
 import { useMainpage } from "./MainpageProvider";
+import { useAuth } from "@/contexts/AuthContext";
 
 const NAV_ITEMS = [
   { id: "home", label: "Home", icon: Home, href: "/mainpage" },
@@ -23,14 +27,32 @@ const NAV_ITEMS = [
   { id: "favorites", label: "Favorites", icon: Heart, href: "/mainpage/favorites" },
 ] as const;
 
+const OWNER_ITEMS = [
+  { id: "restaurants", label: "Restaurants", icon: Store, href: "/mainpage/restaurants" },
+] as const;
+
 function isActivePath(pathname: string, href: string): boolean {
   if (href === "/mainpage") return pathname === "/mainpage";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function navLinkClass(isActive: boolean, nested = false): string {
+  return `w-full flex items-center gap-3.5 ${nested ? "px-4 py-2" : "px-4 py-2.5"} rounded-xl ${
+    nested ? "text-[13px]" : "text-[14px]"
+  } font-medium transition-all duration-200 text-left ${
+    isActive
+      ? "bg-[#F5ECE5] text-[#B55234] font-semibold shadow-xs"
+      : "text-[#6B6661] hover:text-[#1A1A1A] hover:bg-black/[0.03]"
+  }`;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const { mobileMenuOpen, closeMobileMenu } = useMainpage();
+  const { user } = useAuth();
+  const showOwnerNav = Boolean(user?.canManageRestaurants);
+  const ownerSectionActive = OWNER_ITEMS.some((item) => isActivePath(pathname, item.href));
+  const [ownerOpen, setOwnerOpen] = useState(true);
 
   const content = (
     <div className="h-full flex flex-col justify-between py-6 px-4 md:px-5">
@@ -68,11 +90,7 @@ export function Sidebar() {
                 key={item.id}
                 href={item.href}
                 onClick={closeMobileMenu}
-                className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-200 text-left ${
-                  isActive
-                    ? "bg-[#F5ECE5] text-[#B55234] font-semibold shadow-xs"
-                    : "text-[#6B6661] hover:text-[#1A1A1A] hover:bg-black/[0.03]"
-                }`}
+                className={navLinkClass(isActive)}
               >
                 <Icon
                   className={`w-4 h-4 transition-colors ${
@@ -84,6 +102,57 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {showOwnerNav && (
+            <div className="mt-3 pt-3 border-t border-[#ECE7DC]">
+              <button
+                type="button"
+                onClick={() => setOwnerOpen((open) => !open)}
+                className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-200 text-left ${
+                  ownerSectionActive
+                    ? "text-[#B55234] font-semibold"
+                    : "text-[#6B6661] hover:text-[#1A1A1A] hover:bg-black/[0.03]"
+                }`}
+                aria-expanded={ownerOpen}
+              >
+                <UtensilsCrossed
+                  className={`w-4 h-4 ${ownerSectionActive ? "text-[#B55234]" : "text-[#7B756E]"}`}
+                  strokeWidth={ownerSectionActive ? 2.2 : 1.9}
+                />
+                <span className="flex-1">Owner / Manager</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-[#9E988F] transition-transform ${
+                    ownerOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {ownerOpen && (
+                <div className="mt-1 ml-2 flex flex-col gap-0.5 border-l border-[#ECE7DC] pl-2">
+                  {OWNER_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isActivePath(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        onClick={closeMobileMenu}
+                        className={navLinkClass(isActive, true)}
+                      >
+                        <Icon
+                          className={`w-3.5 h-3.5 ${
+                            isActive ? "text-[#B55234]" : "text-[#7B756E]"
+                          }`}
+                          strokeWidth={isActive ? 2.2 : 1.9}
+                        />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
       </div>
 

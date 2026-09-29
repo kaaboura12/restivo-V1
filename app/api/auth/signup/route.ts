@@ -19,8 +19,10 @@ import { db } from "@/lib/db";
 import { AuthError, isPgUniqueViolation, toErrorResponse } from "@/lib/auth/errors";
 import { signAccessToken, signRefreshToken } from "@/lib/auth/jwt";
 import { hashPassword } from "@/lib/auth/password";
-import { setRefreshTokenCookie } from "@/lib/auth/cookies";
+import { jsonWithRefreshCookie } from "@/lib/auth/cookies";
 import { parseBody, signUpSchema } from "@/lib/auth/validation";
+import { signupRoleToManagementRole } from "@/lib/auth/access";
+import { toAuthUser } from "@/lib/auth/public-user";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,7 @@ export async function POST(request: Request): Promise<Response> {
       const newUser = await tx.orm.public.User.create({
         email: body.email,
         passwordHash,
+        managementRole: signupRoleToManagementRole(body.role),
       });
 
       await tx.orm.public.Profile.create({
@@ -60,25 +63,22 @@ export async function POST(request: Request): Promise<Response> {
       signRefreshToken(user.id),
     ]);
 
-    // ── 6. Set httpOnly refresh cookie ─────────────────────────────────────
-    await setRefreshTokenCookie(refreshToken);
+    const publicUser = await toAuthUser(user, {
+      firstName: body.firstName,
+      lastName: body.lastName,
+      displayName: `${body.firstName} ${body.lastName}`.trim(),
+      avatarUrl: null,
+    });
 
-    // ── 7. Respond ─────────────────────────────────────────────────────────
-    return Response.json(
+    return jsonWithRefreshCookie(
       {
         ok: true,
         accessToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: body.firstName,
-          lastName: body.lastName,
-          displayName: `${body.firstName} ${body.lastName}`.trim(),
-        },
-        /** Onboarding intent – use for client-side routing only. */
+        user: publicUser,
         role: body.role,
       },
-      { status: 201 }
+      refreshToken,
+      201
     );
   } catch (err) {
     // Map pg unique-violation to a typed AuthError when the ORM surfaces it

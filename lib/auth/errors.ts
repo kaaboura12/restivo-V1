@@ -48,7 +48,10 @@ export const AUTH_ERROR_CODES = {
     message: "The provided token has expired. Please sign in again.",
   },
 
-  // Input validation
+  FORBIDDEN: {
+    status: 403,
+    message: "You do not have permission to access this resource.",
+  },
   VALIDATION_ERROR: {
     status: 422,
     message: "The request body contains invalid data.",

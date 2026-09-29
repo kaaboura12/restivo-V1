@@ -14,10 +14,11 @@
 import { db } from "@/lib/db";
 import { AuthError, toErrorResponse } from "@/lib/auth/errors";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "@/lib/auth/jwt";
+import { NextResponse } from "next/server";
 import {
-  clearRefreshTokenCookie,
+  applyClearedRefreshCookies,
   getRefreshTokenCookie,
-  setRefreshTokenCookie,
+  jsonWithRefreshCookie,
 } from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
@@ -35,27 +36,29 @@ export async function POST(): Promise<Response> {
     // ── 3. Re-validate the account ─────────────────────────────────────────
     const user = await db.orm.public.User.where({ id: userId }).first();
     if (!user) {
-      // User was deleted after the token was issued – clear the stale cookie.
-      await clearRefreshTokenCookie();
       throw new AuthError("INVALID_TOKEN");
     }
     if (user.status === "SUSPENDED") throw new AuthError("USER_SUSPENDED");
     if (user.status === "DELETED") {
-      await clearRefreshTokenCookie();
       throw new AuthError("USER_DELETED");
     }
 
-    // ── 4. Rotate: issue new access + refresh tokens ──────────────────────
     const [accessToken, newRefreshToken] = await Promise.all([
       signAccessToken(user.id, user.email),
       signRefreshToken(user.id),
     ]);
 
-    await setRefreshTokenCookie(newRefreshToken);
-
-    // ── 5. Respond ─────────────────────────────────────────────────────────
-    return Response.json({ ok: true, accessToken });
+    return jsonWithRefreshCookie({ ok: true, accessToken }, newRefreshToken);
   } catch (err) {
-    return toErrorResponse(err);
+    const response = toErrorResponse(err);
+    if (err instanceof AuthError && (err.code === "INVALID_TOKEN" || err.code === "USER_DELETED")) {
+      return applyClearedRefreshCookies(
+        NextResponse.json(
+          { ok: false, code: err.code, message: err.message },
+          { status: err.httpStatus }
+        )
+      );
+    }
+    return response;
   }
 }

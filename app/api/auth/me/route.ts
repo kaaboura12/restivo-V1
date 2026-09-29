@@ -13,6 +13,7 @@
 import { db } from "@/lib/db";
 import { AuthError, toErrorResponse } from "@/lib/auth/errors";
 import { requireUserId } from "@/lib/auth/session";
+import { toAuthUser } from "@/lib/auth/public-user";
 
 export const dynamic = "force-dynamic";
 
@@ -32,14 +33,9 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({
       ok: true,
       user: {
-        id: user.id,
-        email: user.email,
+        ...(await toAuthUser(user, profile)),
         status: user.status,
         emailVerifiedAt: user.emailVerifiedAt ?? null,
-        firstName: profile?.firstName ?? null,
-        lastName: profile?.lastName ?? null,
-        displayName: profile?.displayName ?? null,
-        avatarUrl: profile?.avatarUrl ?? null,
         phone: profile?.phone ?? null,
         bio: profile?.bio ?? null,
         createdAt: user.createdAt,

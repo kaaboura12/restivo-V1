@@ -125,6 +125,8 @@ model User {
   passwordHash       String
   emailVerifiedAt    DateTime?
   status             UserStatus                    @default(ACTIVE)
+  /// OWNER when they signed up as Owner/Manager. MANAGER is usually granted via membership.
+  managementRole     MembershipRole?
 
   profile            Profile?
 
@@ -152,6 +154,7 @@ model User {
   updatedAt          temporal.updatedAtString()
 
   @@index([status])
+  @@index([managementRole])
 }
 
 //
