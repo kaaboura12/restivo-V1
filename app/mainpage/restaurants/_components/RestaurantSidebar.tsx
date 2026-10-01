@@ -24,19 +24,33 @@ import {
 } from "lucide-react";
 import { useRestaurantManager } from "../_context/RestaurantManagerContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
+const RESTAURANTS_ROOT = "/mainpage/restaurants";
 
 const NAV_ITEMS = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "overview", label: "Overview", icon: LayoutDashboard, href: RESTAURANTS_ROOT },
   { id: "reservations", label: "Reservations", icon: CalendarDays },
   { id: "orders", label: "Orders", icon: ShoppingBag },
-  { id: "menu", label: "Menu", icon: BookOpen },
-  { id: "tables", label: "Tables", icon: Armchair },
+  { id: "menu", label: "Menu", icon: BookOpen, href: `${RESTAURANTS_ROOT}/menu` },
+  { id: "tables", label: "Tables", icon: Armchair, href: `${RESTAURANTS_ROOT}/tables` },
   { id: "staff", label: "Staff", icon: Users2 },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "reviews", label: "Reviews", icon: Star },
   { id: "settings", label: "Settings", icon: Settings },
 ] as const;
+
+function isNavActive(
+  pathname: string,
+  item: (typeof NAV_ITEMS)[number],
+  activeNavTab: string
+): boolean {
+  if ("href" in item && item.href) {
+    if (item.id === "overview") return pathname === RESTAURANTS_ROOT;
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  }
+  return pathname === RESTAURANTS_ROOT && activeNavTab === item.id;
+}
 
 export function RestaurantSidebar() {
   const {
@@ -51,6 +65,7 @@ export function RestaurantSidebar() {
     setMobileMenuOpen,
   } = useRestaurantManager();
 
+  const pathname = usePathname();
   const { signOut } = useAuth();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -264,21 +279,15 @@ export function RestaurantSidebar() {
         <nav className="flex flex-col gap-0.5 mt-1" aria-label="Restaurant Management Navigation">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = activeNavTab === item.id;
+            const isActive = isNavActive(pathname, item, activeNavTab);
+            const className = `w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13.5px] font-medium transition-all text-left ${
+              isActive
+                ? "bg-[#FAF0EA] text-[#B55234] font-bold shadow-2xs"
+                : "text-[#666059] hover:text-[#1A1A1A] hover:bg-black/[0.03]"
+            }`;
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveNavTab(item.id);
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13.5px] font-medium transition-all text-left ${
-                  isActive
-                    ? "bg-[#FAF0EA] text-[#B55234] font-bold shadow-2xs"
-                    : "text-[#666059] hover:text-[#1A1A1A] hover:bg-black/[0.03]"
-                }`}
-              >
+            const content = (
+              <>
                 <Icon
                   className={`w-4 h-4 transition-colors ${
                     isActive ? "text-[#B55234]" : "text-[#7B756E]"
@@ -286,6 +295,36 @@ export function RestaurantSidebar() {
                   strokeWidth={isActive ? 2.3 : 1.9}
                 />
                 <span>{item.label}</span>
+              </>
+            );
+
+            if ("href" in item && item.href) {
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  onClick={() => {
+                    setActiveNavTab(item.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={className}
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setActiveNavTab(item.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={className}
+              >
+                {content}
               </button>
             );
           })}

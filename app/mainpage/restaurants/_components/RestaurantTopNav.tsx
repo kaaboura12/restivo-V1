@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useRestaurantManager } from "../_context/RestaurantManagerContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePathname } from "next/navigation";
 
 export function RestaurantTopNav() {
   const {
@@ -29,6 +30,12 @@ export function RestaurantTopNav() {
     openRestaurantProfile,
   } = useRestaurantManager();
   const { user } = useAuth();
+  const pathname = usePathname();
+  const sectionLabel = pathname?.startsWith("/mainpage/restaurants/menu")
+    ? "Menu"
+    : pathname?.startsWith("/mainpage/restaurants/tables")
+      ? "Tables"
+      : "Overview";
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -65,7 +72,7 @@ export function RestaurantTopNav() {
             </span>
           </button>
           <span className="text-[#A39C91]">/</span>
-          <span className="text-[#736D65]">Overview</span>
+          <span className="text-[#736D65]">{sectionLabel}</span>
         </div>
       </div>
 

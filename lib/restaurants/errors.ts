@@ -13,6 +13,14 @@ export const RESTAURANT_ERROR_CODES = {
     status: 409,
     message: "A restaurant with this name already exists. Try a different name.",
   },
+  NOT_FOUND: {
+    status: 404,
+    message: "The requested resource was not found.",
+  },
+  CONFLICT: {
+    status: 409,
+    message: "This resource already exists.",
+  },
   INTERNAL_ERROR: {
     status: 500,
     message: "An unexpected error occurred. Please try again later.",
