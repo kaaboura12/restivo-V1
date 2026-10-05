@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Bell, ChevronDown, Menu, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileInitials } from "../../_lib/profile";
-import { NOTIFICATIONS, VENUE } from "../_lib/board";
+import { NOTIFICATIONS } from "../_lib/board";
 import { useStaffChrome } from "../_context/staff-chrome";
 
 const SECTION_LABEL = {
@@ -18,8 +18,9 @@ const SECTION_LABEL = {
 
 export function StaffTopNav() {
   const { user } = useAuth();
-  const { setMobileOpen, section, setSection, search, setSearch } = useStaffChrome();
+  const { setMobileOpen, section, setSection, search, setSearch, workplace } = useStaffChrome();
   const name = user?.firstName || user?.displayName || "Staff";
+  const placeName = workplace?.name ?? "Find a restaurant";
 
   return (
     <header className="flex items-center justify-between gap-3 border-b border-[#ECE7DC] pb-4">
@@ -33,10 +34,14 @@ export function StaffTopNav() {
           <Menu className="h-5 w-5" />
         </button>
         <p className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-[#736D65]">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-[#2E7D32]" />
-          <span className="truncate font-semibold text-[#1A1A1A]">{VENUE.name}</span>
-          <span className="text-[#A39C91]">/</span>
-          <span className="truncate">{SECTION_LABEL[section]}</span>
+          {workplace ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#2E7D32]" /> : null}
+          <span className="truncate font-semibold text-[#1A1A1A]">{placeName}</span>
+          {workplace ? (
+            <>
+              <span className="text-[#A39C91]">/</span>
+              <span className="truncate">{SECTION_LABEL[section]}</span>
+            </>
+          ) : null}
         </p>
       </div>
 
@@ -51,23 +56,27 @@ export function StaffTopNav() {
             className="w-44 rounded-full border border-[#E8E4DA] bg-white/70 py-1.5 pr-3 pl-8 text-xs focus:border-[#B55234] focus:bg-white focus:outline-none md:w-56"
           />
         </label>
-        <button
-          type="button"
-          onClick={() => setSection("notifications")}
-          className="relative flex h-8 w-8 items-center justify-center rounded-full border border-[#E8E4DA] bg-white/80"
-          aria-label="View notifications"
-        >
-          <Bell className="h-3.5 w-3.5" />
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E24B4B] px-1 text-[9px] font-bold text-white">
-            {NOTIFICATIONS.length}
+        {workplace ? (
+          <button
+            type="button"
+            onClick={() => setSection("notifications")}
+            className="relative flex h-8 w-8 items-center justify-center rounded-full border border-[#E8E4DA] bg-white/80"
+            aria-label="View notifications"
+          >
+            <Bell className="h-3.5 w-3.5" />
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E24B4B] px-1 text-[9px] font-bold text-white">
+              {NOTIFICATIONS.length}
+            </span>
+          </button>
+        ) : null}
+        {workplace ? (
+          <span className="hidden items-center gap-1.5 rounded-full border border-[#E8E4DA] bg-white/80 px-2.5 py-1 text-[11px] font-semibold md:inline-flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#2E7D32]" />
+            {workplace.name}
+            <span className="font-medium text-[#2E7D32]">Open</span>
+            <ChevronDown className="h-3 w-3 text-[#8A847C]" />
           </span>
-        </button>
-        <span className="hidden items-center gap-1.5 rounded-full border border-[#E8E4DA] bg-white/80 px-2.5 py-1 text-[11px] font-semibold md:inline-flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#2E7D32]" />
-          {VENUE.name}
-          <span className="font-medium text-[#2E7D32]">Open</span>
-          <ChevronDown className="h-3 w-3 text-[#8A847C]" />
-        </span>
+        ) : null}
         <span className="flex items-center gap-2 rounded-full border border-[#E8E4DA] bg-white/70 py-1 pr-2.5 pl-1">
           {user?.avatarUrl ? (
             <span className="relative h-7 w-7 overflow-hidden rounded-full">

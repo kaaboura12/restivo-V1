@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileInitials } from "../../_lib/profile";
-import { NOTIFICATIONS, VENUE } from "../_lib/board";
+import { NOTIFICATIONS } from "../_lib/board";
 import type { StaffSectionId } from "../_lib/types";
 import { useStaffChrome } from "../_context/staff-chrome";
 
@@ -59,6 +59,7 @@ function SidebarBody({
   onClose: () => void;
 }) {
   const { user, signOut } = useAuth();
+  const { workplace, workplaceReady } = useStaffChrome();
   const router = useRouter();
   const [supportOpen, setSupportOpen] = useState(false);
   const name = user?.firstName || user?.displayName || "Staff";
@@ -84,21 +85,10 @@ function SidebarBody({
           </button>
         </div>
 
-        <div className="flex items-center gap-2.5 rounded-2xl border border-[#E9E3D8] bg-white/70 p-2">
-          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-[#E2DDD3]">
-            <Image src={VENUE.image} alt="" fill className="object-cover" sizes="36px" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-bold">{VENUE.name}</p>
-            <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#78726A]">
-              <span className="truncate">{VENUE.city}</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-[#2E7D32]" />
-              <span className="text-[#2E7D32]">Open</span>
-            </p>
-          </div>
-        </div>
+        <VenueCard name={workplace?.name ?? null} city={workplace?.city ?? null} coverUrl={workplace?.coverUrl ?? null} ready={workplaceReady} />
 
-        <nav className="flex flex-col gap-0.5" aria-label="Staff workspace">
+        {workplace ? (
+          <nav className="flex flex-col gap-0.5" aria-label="Staff workspace">
           {NAV.map((item) => {
             const Icon = item.icon;
             const active = section === item.id;
@@ -125,6 +115,7 @@ function SidebarBody({
             );
           })}
         </nav>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-1 border-t border-[#ECE7DC] pt-4">
@@ -148,6 +139,36 @@ function SidebarBody({
           <LogOut className="h-4 w-4" />
           Logout
         </button>
+      </div>
+    </div>
+  );
+}
+
+function VenueCard({
+  name,
+  city,
+  coverUrl,
+  ready,
+}: {
+  name: string | null;
+  city: string | null;
+  coverUrl: string | null;
+  ready: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl border border-[#E9E3D8] bg-white/70 p-2">
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#E2DDD3] bg-[#FAF0EA] text-[11px] font-bold text-[#B55234]">
+        {coverUrl?.startsWith("/") ? (
+          <Image src={coverUrl} alt="" fill className="object-cover" sizes="36px" />
+        ) : (
+          (name ?? "—").slice(0, 1)
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-[13px] font-bold">{!ready ? "Loading…" : name ?? "No restaurant yet"}</p>
+        <p className="mt-0.5 truncate text-[11px] text-[#78726A]">
+          {name ? (city ?? "On the team") : "Ask to join a restaurant"}
+        </p>
       </div>
     </div>
   );
