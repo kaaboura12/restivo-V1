@@ -5,13 +5,38 @@ import { useRouter } from "next/navigation";
 import { Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRestaurantManager } from "../_context/RestaurantManagerContext";
-import type { FloorName, ListTab, ViewMode } from "./_lib/tables-ui";
+import type { FloorName, ListTab } from "./_lib/tables-ui";
 import { TablesHeader } from "./_components/TablesHeader";
 import { FloorBar } from "./_components/FloorBar";
 import { ZonesPanel } from "./_components/ZonesPanel";
-import { FloorCanvas } from "./_components/FloorCanvas";
-import { FloorSettingsPanel } from "./_components/FloorSettingsPanel";
+import { FloorEditor } from "./_components/floor-plan/FloorEditor";
 import { TablesList } from "./_components/TablesList";
+import type { FloorObject } from "./_components/floor-plan/floor-object";
+
+const FLOOR_OBJECTS: FloorObject[] = [
+  {
+    id: "table-1",
+    type: "ROUND_TABLE",
+    x: 3,
+    y: 2,
+    width: 0.9,
+    height: 0.9,
+    rotation: 0,
+    zIndex: 1,
+    locked: false,
+  },
+  {
+    id: "kitchen-1",
+    type: "KITCHEN",
+    x: 8,
+    y: 2,
+    width: 5,
+    height: 4,
+    rotation: 0,
+    zIndex: 1,
+    locked: false,
+  },
+];
 
 export default function TablesAndFloorsPage() {
   const router = useRouter();
@@ -21,7 +46,6 @@ export default function TablesAndFloorsPage() {
 
   const [activeFloor, setActiveFloor] = useState<FloorName>("Ground Floor");
   const [activeZone, setActiveZone] = useState("Main Dining");
-  const [viewMode, setViewMode] = useState<ViewMode>("2D");
   const [activeTab, setActiveTab] = useState<ListTab>("Tables");
 
   useEffect(() => {
@@ -62,10 +86,9 @@ export default function TablesAndFloorsPage() {
     <div className="flex flex-col gap-0 select-none animate-in fade-in duration-300 pb-6">
       <TablesHeader />
       <FloorBar activeFloor={activeFloor} onFloorChange={setActiveFloor} />
-      <div className="flex gap-6 h-[600px]">
+      <div className="flex h-[760px] gap-4">
         <ZonesPanel activeZone={activeZone} onZoneChange={setActiveZone} />
-        <FloorCanvas viewMode={viewMode} onViewModeChange={setViewMode} />
-        <FloorSettingsPanel floorName={activeFloor} />
+        <FloorEditor width={18} height={12} objects={FLOOR_OBJECTS} />
       </div>
       <TablesList activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
