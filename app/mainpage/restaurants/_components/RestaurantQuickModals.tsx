@@ -304,7 +304,7 @@ export function RestaurantQuickModals({
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Floor Zone</label>
+                <label className="font-semibold block mb-1">Floor</label>
                 <select
                   value={newTableFloor}
                   onChange={(e) => setNewTableFloor(Number(e.target.value))}

@@ -12,8 +12,8 @@
  * 7. Returns the access token + sanitised user object
  *
  * The `role` field is an onboarding intent ("owner" | "staff" | "customer").
- * It is echoed back so the client can route to the right onboarding flow.
- * It is NOT persisted yet — restaurant memberships require a restaurant ID.
+ * Owner and staff are stored on `User.managementRole`. Customer stays unset.
+ * The chosen role is also echoed so the client can route after sign-up.
  */
 import { db } from "@/lib/db";
 import { AuthError, isPgUniqueViolation, toErrorResponse } from "@/lib/auth/errors";

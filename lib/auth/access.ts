@@ -1,10 +1,12 @@
 /**
- * Restaurant management access (MembershipRole OWNER | MANAGER).
+ * Role access for the shared sidebar.
  *
- * Granted when:
- *  - the account's `managementRole` is OWNER or MANAGER (set at signup
- *    when they chose "Owner or Manager"), or
+ * Owner / Manager is granted when:
+ *  - the account's `managementRole` is OWNER or MANAGER, or
  *  - they hold an ACTIVE RestaurantMembership with OWNER or MANAGER.
+ *
+ * Staff is granted when the account role is STAFF, or they hold an ACTIVE
+ * membership with STAFF, and they are not already an owner or manager.
  */
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
@@ -16,9 +18,14 @@ export function isManagerRole(role: string | null | undefined): boolean {
   return role === "OWNER" || role === "MANAGER";
 }
 
+export function isStaffRole(role: string | null | undefined): boolean {
+  return role === "STAFF";
+}
+
 export interface RestaurantAccess {
   canManageRestaurants: boolean;
   managementRole: "OWNER" | "MANAGER" | null;
+  isStaff: boolean;
 }
 
 export async function resolveRestaurantAccess(
@@ -37,17 +44,22 @@ export async function resolveRestaurantAccess(
   let managementRole: "OWNER" | "MANAGER" | null = null;
   if (accountRole === "OWNER" || memberships.some((row) => row.role === "OWNER")) {
     managementRole = "OWNER";
-  } else   if (accountRole === "MANAGER" || memberships.some((row) => row.role === "MANAGER")) {
+  } else if (accountRole === "MANAGER" || memberships.some((row) => row.role === "MANAGER")) {
     managementRole = "MANAGER";
   }
 
-  return { canManageRestaurants, managementRole };
+  const isStaff =
+    !canManageRestaurants &&
+    (isStaffRole(accountRole) || memberships.some((row) => isStaffRole(row.role)));
+
+  return { canManageRestaurants, managementRole, isStaff };
 }
 
 export function signupRoleToManagementRole(
   role: "owner" | "staff" | "customer"
 ): MembershipRole | null {
   if (role === "owner") return "OWNER";
+  if (role === "staff") return "STAFF";
   return null;
 }
 

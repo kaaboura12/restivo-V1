@@ -12,6 +12,7 @@ import {
   Heart,
   X,
   UtensilsCrossed,
+  Users2,
 } from "lucide-react";
 import { RestivoGlyph } from "./RestivoGlyph";
 import { useMainpage } from "./MainpageProvider";
@@ -25,12 +26,20 @@ const NAV_ITEMS = [
   { id: "favorites", label: "Favorites", icon: Heart, href: "/mainpage/favorites" },
 ] as const;
 
-const OWNER_ITEM = {
-  id: "owner",
-  label: "Owner / Manager",
-  icon: UtensilsCrossed,
-  href: "/mainpage/restaurants",
-} as const;
+const ROLE_ITEMS = [
+  {
+    id: "owner",
+    label: "Owner / Manager",
+    icon: UtensilsCrossed,
+    href: "/mainpage/restaurants",
+  },
+  {
+    id: "staff",
+    label: "Staff",
+    icon: Users2,
+    href: "/mainpage/staff",
+  },
+] as const;
 
 function isActivePath(pathname: string, href: string): boolean {
   if (href === "/mainpage") return pathname === "/mainpage";
@@ -45,13 +54,37 @@ function navLinkClass(isActive: boolean): string {
   }`;
 }
 
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  active: boolean;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link href={href} onClick={onNavigate} className={navLinkClass(active)}>
+      <Icon
+        className={`w-4 h-4 transition-colors ${active ? "text-[#B55234]" : "text-[#7B756E]"}`}
+        strokeWidth={active ? 2.2 : 1.9}
+      />
+      <span>{label}</span>
+    </Link>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const { mobileMenuOpen, closeMobileMenu } = useMainpage();
   const { user } = useAuth();
-  const showOwnerNav = Boolean(user?.canManageRestaurants);
-  const ownerActive = isActivePath(pathname, OWNER_ITEM.href);
-  const OwnerIcon = OWNER_ITEM.icon;
+  const visibleRoles = ROLE_ITEMS.filter((item) =>
+    item.id === "owner" ? Boolean(user?.canManageRestaurants) : Boolean(user?.isStaff)
+  );
 
   const content = (
     <div className="h-full flex flex-col justify-between py-6 px-4 md:px-5">
@@ -80,43 +113,29 @@ export function Sidebar() {
         </div>
 
         <nav className="flex flex-col gap-1.5" aria-label="Main Navigation">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = isActivePath(pathname, item.href);
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.id}
+              href={item.href}
+              label={item.label}
+              icon={item.icon}
+              active={isActivePath(pathname, item.href)}
+              onNavigate={closeMobileMenu}
+            />
+          ))}
 
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={closeMobileMenu}
-                className={navLinkClass(isActive)}
-              >
-                <Icon
-                  className={`w-4 h-4 transition-colors ${
-                    isActive ? "text-[#B55234]" : "text-[#7B756E]"
-                  }`}
-                  strokeWidth={isActive ? 2.2 : 1.9}
+          {visibleRoles.length > 0 && (
+            <div className="mt-3 flex flex-col gap-1.5 border-t border-[#ECE7DC] pt-3">
+              {visibleRoles.map((item) => (
+                <NavLink
+                  key={item.id}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  active={isActivePath(pathname, item.href)}
+                  onNavigate={closeMobileMenu}
                 />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-
-          {showOwnerNav && (
-            <div className="mt-3 pt-3 border-t border-[#ECE7DC]">
-              <Link
-                href={OWNER_ITEM.href}
-                onClick={closeMobileMenu}
-                className={navLinkClass(ownerActive)}
-              >
-                <OwnerIcon
-                  className={`w-4 h-4 transition-colors ${
-                    ownerActive ? "text-[#B55234]" : "text-[#7B756E]"
-                  }`}
-                  strokeWidth={ownerActive ? 2.2 : 1.9}
-                />
-                <span>{OWNER_ITEM.label}</span>
-              </Link>
+              ))}
             </div>
           )}
         </nav>

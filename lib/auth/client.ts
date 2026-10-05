@@ -21,6 +21,7 @@ export interface AuthUser {
   avatarUrl: string | null;
   canManageRestaurants: boolean;
   managementRole: "OWNER" | "MANAGER" | null;
+  isStaff: boolean;
 }
 
 export interface AuthUserFull extends AuthUser {

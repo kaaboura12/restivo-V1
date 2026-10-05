@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRestaurantManager } from "../_context/RestaurantManagerContext";
-import type { ListTab } from "./_lib/tables-ui";
 import { rowsForFloor } from "./_lib/floor-rows";
 import { useRestaurantFloors } from "./_lib/use-floors";
 import { TablesHeader } from "./_components/TablesHeader";
 import { FloorBar } from "./_components/FloorBar";
 import { FloorDialog } from "./_components/FloorDialog";
-import { ZonesPanel } from "./_components/ZonesPanel";
 import { FloorEditor } from "./_components/floor-plan/FloorEditor";
 import { TablesList } from "./_components/TablesList";
 
@@ -20,8 +18,6 @@ export default function TablesAndFloorsPage() {
   const { user, isReady } = useAuth();
   const { currentRestaurant, isLoadingRestaurants, setIsAddRestaurantOpen } = useRestaurantManager();
   const floorsApi = useRestaurantFloors(currentRestaurant?.id);
-  const [activeZone, setActiveZone] = useState("Main Dining");
-  const [activeTab, setActiveTab] = useState<ListTab>("Tables");
   const [dialog, setDialog] = useState<"create" | "edit" | null>(null);
 
   useEffect(() => {
@@ -82,8 +78,7 @@ export default function TablesAndFloorsPage() {
         <EmptyFloor onAdd={() => setDialog("create")} />
       ) : null}
       {floor ? (
-        <div className="flex h-[760px] gap-4">
-          <ZonesPanel activeZone={activeZone} onZoneChange={setActiveZone} />
+        <div className="h-[760px]">
           <FloorEditor
             key={floor.id}
             width={floor.width}
@@ -94,7 +89,7 @@ export default function TablesAndFloorsPage() {
           />
         </div>
       ) : null}
-      <TablesList activeTab={activeTab} rows={rowsForFloor(floor)} onTabChange={setActiveTab} />
+      <TablesList floorName={floor?.name ?? null} rows={rowsForFloor(floor)} />
       {dialog ? (
         <FloorDialog
           title={dialog === "create" ? "Add a floor" : "Edit floor"}
@@ -113,7 +108,7 @@ export default function TablesAndFloorsPage() {
   );
 }
 
-function Status({ children }: { children: React.ReactNode }) {
+function Status({ children }: { children: string }) {
   return <div className="flex items-center justify-center py-24 text-sm text-[#7A746B]">{children}</div>;
 }
 

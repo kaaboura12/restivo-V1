@@ -9,7 +9,6 @@ export function rowsForFloor(floor: PublicFloor | null): TableRow[] {
     num: labelOf(object, index),
     cap: objectCapacity(object) ?? 0,
     shape: FLOOR_OBJECT_CATALOG[object.type].label,
-    zone: floor.name,
     status: "Available",
     statusColor: "text-green-700 bg-green-100",
   }));

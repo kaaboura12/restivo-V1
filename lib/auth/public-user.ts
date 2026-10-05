@@ -24,5 +24,6 @@ export async function toAuthUser(
     avatarUrl: profile?.avatarUrl ?? null,
     canManageRestaurants: access.canManageRestaurants,
     managementRole: access.managementRole,
+    isStaff: access.isStaff,
   };
 }
