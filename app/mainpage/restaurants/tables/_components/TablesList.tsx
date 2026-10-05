@@ -1,13 +1,15 @@
 "use client";
 
 import { ChevronDown, Edit2, MoreVertical, Search, Square, Users } from "lucide-react";
-import { LIST_TABS, TABLE_ROWS, type ListTab } from "../_lib/tables-ui";
+import { LIST_TABS, type ListTab, type TableRow } from "../_lib/tables-ui";
 
 export function TablesList({
   activeTab,
+  rows,
   onTabChange,
 }: {
   activeTab: ListTab;
+  rows: TableRow[];
   onTabChange: (tab: ListTab) => void;
 }) {
   return (
@@ -51,12 +53,16 @@ export function TablesList({
         </div>
       </div>
 
-      {activeTab === "Tables" ? <TablesTable /> : <ZonesEmpty />}
+      {activeTab === "Tables" ? <TablesTable rows={rows} /> : <ZonesEmpty />}
     </section>
   );
 }
 
-function TablesTable() {
+function TablesTable({ rows }: { rows: TableRow[] }) {
+  if (rows.length === 0) {
+    return <p className="px-6 py-10 text-sm text-[#736D65]">No tables on this floor yet. Drag one onto the plan, then save.</p>;
+  }
+
   return (
     <table className="w-full text-left border-collapse">
       <thead>
@@ -82,7 +88,7 @@ function TablesTable() {
         </tr>
       </thead>
       <tbody>
-        {TABLE_ROWS.map((table) => (
+        {rows.map((table) => (
           <tr
             key={table.num}
             className="border-b border-[#E5DFD3] last:border-0 hover:bg-[#F9F7F4] transition-colors"

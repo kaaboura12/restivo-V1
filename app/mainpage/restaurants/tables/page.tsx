@@ -5,48 +5,24 @@ import { useRouter } from "next/navigation";
 import { Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRestaurantManager } from "../_context/RestaurantManagerContext";
-import type { FloorName, ListTab } from "./_lib/tables-ui";
+import type { ListTab } from "./_lib/tables-ui";
+import { rowsForFloor } from "./_lib/floor-rows";
+import { useRestaurantFloors } from "./_lib/use-floors";
 import { TablesHeader } from "./_components/TablesHeader";
 import { FloorBar } from "./_components/FloorBar";
+import { FloorDialog } from "./_components/FloorDialog";
 import { ZonesPanel } from "./_components/ZonesPanel";
 import { FloorEditor } from "./_components/floor-plan/FloorEditor";
 import { TablesList } from "./_components/TablesList";
-import type { FloorObject } from "./_components/floor-plan/floor-object";
-
-const FLOOR_OBJECTS: FloorObject[] = [
-  {
-    id: "table-1",
-    type: "ROUND_TABLE",
-    x: 3,
-    y: 2,
-    width: 0.9,
-    height: 0.9,
-    rotation: 0,
-    zIndex: 1,
-    locked: false,
-  },
-  {
-    id: "kitchen-1",
-    type: "KITCHEN",
-    x: 8,
-    y: 2,
-    width: 5,
-    height: 4,
-    rotation: 0,
-    zIndex: 1,
-    locked: false,
-  },
-];
 
 export default function TablesAndFloorsPage() {
   const router = useRouter();
   const { user, isReady } = useAuth();
-  const { currentRestaurant, isLoadingRestaurants, setIsAddRestaurantOpen } =
-    useRestaurantManager();
-
-  const [activeFloor, setActiveFloor] = useState<FloorName>("Ground Floor");
+  const { currentRestaurant, isLoadingRestaurants, setIsAddRestaurantOpen } = useRestaurantManager();
+  const floorsApi = useRestaurantFloors(currentRestaurant?.id);
   const [activeZone, setActiveZone] = useState("Main Dining");
   const [activeTab, setActiveTab] = useState<ListTab>("Tables");
+  const [dialog, setDialog] = useState<"create" | "edit" | null>(null);
 
   useEffect(() => {
     if (!isReady) return;
@@ -54,27 +30,23 @@ export default function TablesAndFloorsPage() {
   }, [isReady, user?.canManageRestaurants, router]);
 
   if (!isReady || isLoadingRestaurants) {
-    return (
-      <div className="flex items-center justify-center py-24 text-sm text-[#7A746B]">
-        Loading tables…
-      </div>
-    );
+    return <Status>Loading tables…</Status>;
   }
 
   if (!currentRestaurant) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20 px-4">
-        <div className="w-14 h-14 rounded-2xl bg-[#FAF0EA] text-[#B55234] flex items-center justify-center mb-4">
-          <Store className="w-7 h-7" />
+      <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FAF0EA] text-[#B55234]">
+          <Store className="h-7 w-7" />
         </div>
         <h1 className="text-2xl font-extrabold text-[#1A1A1A]">Create a restaurant first</h1>
-        <p className="text-sm text-[#736D65] mt-2 max-w-md">
+        <p className="mt-2 max-w-md text-sm text-[#736D65]">
           Tables belong to a venue. Add a restaurant, then come back to design the floor plan.
         </p>
         <button
           type="button"
           onClick={() => setIsAddRestaurantOpen(true)}
-          className="mt-5 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#B55234] hover:bg-[#9E4328] text-white text-sm font-bold"
+          className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-[#B55234] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#9E4328]"
         >
           Add a restaurant
         </button>
@@ -82,15 +54,81 @@ export default function TablesAndFloorsPage() {
     );
   }
 
+  const floor = floorsApi.activeFloor;
+
   return (
-    <div className="flex flex-col gap-0 select-none animate-in fade-in duration-300 pb-6">
+    <div className="flex select-none flex-col gap-0 pb-6 animate-in fade-in duration-300">
       <TablesHeader />
-      <FloorBar activeFloor={activeFloor} onFloorChange={setActiveFloor} />
-      <div className="flex h-[760px] gap-4">
-        <ZonesPanel activeZone={activeZone} onZoneChange={setActiveZone} />
-        <FloorEditor width={18} height={12} objects={FLOOR_OBJECTS} />
-      </div>
-      <TablesList activeTab={activeTab} onTabChange={setActiveTab} />
+      <FloorBar
+        floors={floorsApi.floors}
+        activeId={floor?.id ?? null}
+        tableCount={floor?.tableCount ?? 0}
+        seatCount={floor?.seatCount ?? 0}
+        onSelect={floorsApi.select}
+        onAdd={() => setDialog("create")}
+        onEdit={() => setDialog("edit")}
+        onDuplicate={() => floor && void floorsApi.duplicate(floor.id)}
+        onDelete={() => {
+          if (!floor) return;
+          if (window.confirm(`Delete ${floor.name}? Tables on this floor are removed with it.`)) {
+            void floorsApi.remove(floor.id);
+          }
+        }}
+        onReorder={() => floor && void floorsApi.reorder(floor.id)}
+      />
+      {floorsApi.error ? <p className="mb-3 text-sm font-medium text-[#B55234]">{floorsApi.error}</p> : null}
+      {floorsApi.loading ? <Status>Loading floors…</Status> : null}
+      {!floorsApi.loading && !floor ? (
+        <EmptyFloor onAdd={() => setDialog("create")} />
+      ) : null}
+      {floor ? (
+        <div className="flex h-[760px] gap-4">
+          <ZonesPanel activeZone={activeZone} onZoneChange={setActiveZone} />
+          <FloorEditor
+            key={floor.id}
+            width={floor.width}
+            height={floor.height}
+            objects={floor.objects}
+            onSave={(objects) => floorsApi.saveLayout(objects, false)}
+            onPublish={(objects) => floorsApi.saveLayout(objects, true)}
+          />
+        </div>
+      ) : null}
+      <TablesList activeTab={activeTab} rows={rowsForFloor(floor)} onTabChange={setActiveTab} />
+      {dialog ? (
+        <FloorDialog
+          title={dialog === "create" ? "Add a floor" : "Edit floor"}
+          initial={
+            dialog === "edit" && floor
+              ? { name: floor.name, width: floor.width, height: floor.height }
+              : { name: "", width: 18, height: 12 }
+          }
+          onClose={() => setDialog(null)}
+          onSubmit={(value) =>
+            dialog === "edit" && floor ? floorsApi.update(floor.id, value) : floorsApi.create(value)
+          }
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function Status({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center justify-center py-24 text-sm text-[#7A746B]">{children}</div>;
+}
+
+function EmptyFloor({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="mb-6 rounded-2xl border border-dashed border-[#E5DFD3] bg-white px-6 py-16 text-center">
+      <h2 className="text-lg font-semibold">No floors yet</h2>
+      <p className="mt-1 text-sm text-[#736D65]">Name a floor, set its size in meters, then place tables on it.</p>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="mt-4 rounded-xl bg-[#B55234] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#9E4328]"
+      >
+        Add floor
+      </button>
     </div>
   );
 }

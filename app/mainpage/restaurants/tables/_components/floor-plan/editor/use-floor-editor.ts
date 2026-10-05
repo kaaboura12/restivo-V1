@@ -2,14 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createFloorObject, type FloorObject, type FloorObjectType } from "../floor-object";
-import { FLOOR_STORAGE_KEY, GRID_SIZE, OBJECT_SNAP, ZOOM_STEPS } from "./constants";
+import { GRID_SIZE, OBJECT_SNAP, ZOOM_STEPS } from "./constants";
 import { clampBox, snapPosition, type Corner, type Guide, type Point } from "./geometry";
 import { applyGesture, type Gesture } from "./gesture";
-
-type SavedFloor = {
-  objects?: FloorObject[];
-  published?: boolean;
-};
 
 export type FloorEditorApi = {
   width: number;
@@ -25,6 +20,7 @@ export type FloorEditorApi = {
   preview: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  saving: boolean;
   notice: string | null;
   dragging: boolean;
   applyPointer: (point: Point) => void;
@@ -51,10 +47,11 @@ export function useFloorEditor(options: {
   width: number;
   height: number;
   initialObjects: FloorObject[];
-  storageKey?: string;
+  onSave?: (objects: FloorObject[]) => Promise<void>;
+  onPublish?: (objects: FloorObject[]) => Promise<void>;
 }): FloorEditorApi {
-  const { width, height, initialObjects, storageKey = FLOOR_STORAGE_KEY } = options;
-  const [objects, setObjects] = useState(() => loadObjects(storageKey, initialObjects));
+  const { width, height, initialObjects, onSave, onPublish } = options;
+  const [objects, setObjects] = useState(initialObjects);
   const [past, setPast] = useState<FloorObject[][]>([]);
   const [future, setFuture] = useState<FloorObject[][]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,6 +60,7 @@ export function useFloorEditor(options: {
   const [snap, setSnap] = useState(true);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [preview, setPreview] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [gesture, setGesture] = useState<Gesture | null>(null);
 
@@ -164,16 +162,24 @@ export function useFloorEditor(options: {
     setZoom((current) => nextZoom(current, direction));
   }, []);
 
-  const save = useCallback(() => {
-    writeStorage(storageKey, objects, false);
-    setNotice("Saved");
-  }, [objects, storageKey]);
-
-  const publish = useCallback(() => {
-    writeStorage(storageKey, objects, true);
-    setNotice("Published");
-    setPreview(false);
-  }, [objects, storageKey]);
+  const persist = useCallback(
+    async (publish: boolean) => {
+      const run = publish ? onPublish : onSave;
+      if (!run || saving) return;
+      setSaving(true);
+      setNotice(null);
+      try {
+        await run(objects);
+        setNotice(publish ? "Published" : "Saved");
+        if (publish) setPreview(false);
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : "Could not save this floor.");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [objects, onPublish, onSave, saving],
+  );
 
   const applyPointer = useCallback(
     (point: Point) => {
@@ -227,6 +233,7 @@ export function useFloorEditor(options: {
     preview,
     canUndo: past.length > 0,
     canRedo: future.length > 0,
+    saving,
     notice,
     dragging: gesture !== null,
     applyPointer,
@@ -245,8 +252,8 @@ export function useFloorEditor(options: {
     toggleGrid: () => setShowGrid((value) => !value),
     toggleSnap: () => setSnap((value) => !value),
     togglePreview: () => setPreview((value) => !value),
-    save,
-    publish,
+    save: () => void persist(false),
+    publish: () => void persist(true),
   };
 }
 
@@ -260,26 +267,6 @@ function nextZoom(current: number, direction: -1 | 0 | 1) {
   const index = ZOOM_STEPS.findIndex((step) => step >= current - 0.001);
   const nextIndex = Math.min(ZOOM_STEPS.length - 1, Math.max(0, index + direction));
   return ZOOM_STEPS[nextIndex] ?? current;
-}
-
-function loadObjects(key: string, fallback: FloorObject[]) {
-  if (typeof window === "undefined") return fallback;
-  return readSaved(key)?.objects ?? fallback;
-}
-
-function readSaved(key: string): SavedFloor | null {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as SavedFloor;
-    return Array.isArray(parsed.objects) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStorage(key: string, objects: FloorObject[], published: boolean) {
-  localStorage.setItem(key, JSON.stringify({ objects, published }));
 }
 
 function normalizeAngle(value: number) {

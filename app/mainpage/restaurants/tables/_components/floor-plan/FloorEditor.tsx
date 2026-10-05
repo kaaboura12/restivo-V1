@@ -12,14 +12,16 @@ export function FloorEditor({
   width,
   height,
   objects,
-  storageKey,
+  onSave,
+  onPublish,
 }: {
   width: number;
   height: number;
   objects: FloorObject[];
-  storageKey?: string;
+  onSave: (objects: FloorObject[]) => Promise<void>;
+  onPublish: (objects: FloorObject[]) => Promise<void>;
 }) {
-  const editor = useFloorEditor({ width, height, initialObjects: objects, storageKey });
+  const editor = useFloorEditor({ width, height, initialObjects: objects, onSave, onPublish });
 
   return (
     <FloorEditorProvider value={editor}>

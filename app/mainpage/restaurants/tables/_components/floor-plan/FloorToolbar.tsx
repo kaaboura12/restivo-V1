@@ -30,14 +30,22 @@ export function FloorToolbar() {
       <Toggle label="Snap" pressed={editor.snap} onClick={editor.toggleSnap} />
       <span className="mx-1 h-6 w-px bg-[#E5DFD3]" />
       <Toggle label="Preview" pressed={editor.preview} onClick={editor.togglePreview} />
-      <TextButton onClick={editor.save}>{editor.notice === "Saved" ? "Saved" : "Save"}</TextButton>
+      <TextButton disabled={editor.saving} onClick={editor.save}>
+        Save
+      </TextButton>
       <button
         type="button"
+        disabled={editor.saving}
         onClick={editor.publish}
-        className="rounded-lg bg-[#B55234] px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-[#9E4328]"
+        className="rounded-lg bg-[#B55234] px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-[#9E4328] disabled:opacity-50"
       >
-        {editor.notice === "Published" ? "Published" : "Publish"}
+        Publish
       </button>
+      {editor.notice ? (
+        <span className={`text-[13px] font-semibold ${editor.notice === "Saved" || editor.notice === "Published" ? "text-[#6B665E]" : "text-[#B55234]"}`}>
+          {editor.notice}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -82,9 +90,9 @@ function Toggle({ label, pressed, onClick }: { label: string; pressed: boolean; 
   );
 }
 
-function TextButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+function TextButton({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-[#3A3530] hover:bg-[#F5F2EC]">
+    <button type="button" disabled={disabled} onClick={onClick} className="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-[#3A3530] hover:bg-[#F5F2EC] disabled:opacity-50">
       {children}
     </button>
   );
