@@ -1,33 +1,27 @@
 import { RestaurantError } from "@/lib/restaurants/errors";
+import { historyRule, prepareHistory } from "./context";
+import { runToolLoop, type StepMessage, type ToolRequest } from "./loop";
 import { managerPrompt } from "./prompt";
 import { groqTools, runManagerTool } from "./tools";
 import type { ChatTurn } from "./types";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
-const TOOL_ROUNDS = 3;
 
-type ToolCall = {
+type GroqCall = {
   id: string;
   type?: string;
   function?: { name?: string; arguments?: string };
 };
 
-type GroqMessage = {
-  role: string;
-  content?: string | null;
-  tool_calls?: ToolCall[];
-  tool_call_id?: string;
+type GroqMessage = StepMessage & {
+  tool_calls?: GroqCall[];
 };
 
 function groqKey(): string | null {
   const value = process.env.GROQ_API_KEY ?? process.env.Groq_API_Key;
   const key = value?.trim();
   return key ? key : null;
-}
-
-function visibleReply(content: string): string {
-  return content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 }
 
 export async function completeManagerChat(
@@ -37,38 +31,31 @@ export async function completeManagerChat(
 ): Promise<string> {
   const key = groqKey();
   if (!key) throw new RestaurantError("INTERNAL_ERROR", "The assistant is not configured.");
-
   const model = process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL;
-  const thread: GroqMessage[] = [
-    { role: "system", content: managerPrompt(restaurantName) },
-    ...messages.map((message) => ({ role: message.role, content: message.content })),
-  ];
 
-  for (let round = 0; round <= TOOL_ROUNDS; round += 1) {
-    const message = await createCompletion(key, model, thread, round < TOOL_ROUNDS);
-    const calls = (message.tool_calls ?? []).filter((call) => call.id && call.function?.name);
-    if (calls.length === 0) {
-      const reply = visibleReply(message.content ?? "");
-      if (!reply) throw new RestaurantError("INTERNAL_ERROR", "The assistant returned an empty answer.");
-      return reply;
-    }
+  const history = prepareHistory(messages);
 
-    thread.push({ role: "assistant", content: message.content ?? null, tool_calls: calls });
-    for (const call of calls) {
-      const result = await runManagerTool(call.function?.name ?? "", restaurantId, call.function?.arguments);
-      thread.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
-    }
+  try {
+    return await runToolLoop({
+      messages: [
+        { role: "system", content: managerPrompt(restaurantName, historyRule(history)) },
+        ...history.map((message) => ({ role: message.role, content: message.content })),
+      ],
+      complete: (thread, allowTools) => createCompletion(key, model, thread, allowTools),
+      execute: (call) => runManagerTool(call.name, restaurantId, call.arguments),
+    });
+  } catch (err) {
+    if (err instanceof RestaurantError) throw err;
+    throw new RestaurantError("INTERNAL_ERROR", "The assistant could not answer.");
   }
-
-  throw new RestaurantError("INTERNAL_ERROR", "The assistant could not answer.");
 }
 
 async function createCompletion(
   key: string,
   model: string,
-  messages: GroqMessage[],
+  messages: StepMessage[],
   allowTools: boolean
-): Promise<GroqMessage> {
+): Promise<StepMessage> {
   let response: Response;
   try {
     response = await fetch(GROQ_URL, {
@@ -81,7 +68,7 @@ async function createCompletion(
         model,
         temperature: 0.3,
         max_completion_tokens: 900,
-        messages,
+        messages: messages.map(toGroqMessage),
         ...(allowTools ? { tools: groqTools(), tool_choice: "auto" } : {}),
       }),
       signal: AbortSignal.timeout(25_000),
@@ -101,5 +88,26 @@ async function createCompletion(
   const payload = (await response.json()) as { choices?: { message?: GroqMessage }[] };
   const message = payload.choices?.[0]?.message;
   if (!message) throw new RestaurantError("INTERNAL_ERROR", "The assistant returned an empty answer.");
-  return message;
+  return {
+    role: message.role || "assistant",
+    content: message.content,
+    tool_calls: (message.tool_calls ?? []).map(toRequest),
+  };
+}
+
+function toRequest(call: GroqCall): ToolRequest {
+  return { id: call.id, name: call.function?.name ?? "", arguments: call.function?.arguments };
+}
+
+function toGroqMessage(message: StepMessage) {
+  if (!message.tool_calls?.length) return message;
+  return {
+    role: message.role,
+    content: message.content ?? null,
+    tool_calls: message.tool_calls.map((call) => ({
+      id: call.id,
+      type: "function" as const,
+      function: { name: call.name, arguments: call.arguments ?? "{}" },
+    })),
+  };
 }
