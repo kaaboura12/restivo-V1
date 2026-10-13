@@ -35,5 +35,11 @@ async function readFloors(restaurantId: string, args: ListArgs) {
     };
   });
 
-  return { limit: args.limit, truncated: total > args.limit, floors: rows };
+  return {
+    floorCount: rows.length,
+    tableCount: total,
+    limit: args.limit,
+    truncated: total > args.limit,
+    floors: rows,
+  };
 }

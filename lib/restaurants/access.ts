@@ -30,6 +30,28 @@ export async function requireRestaurantManagerUser(request: Request): Promise<{
   return { user, access };
 }
 
+export async function canManageRestaurant(userId: string, restaurantId: string): Promise<boolean> {
+  const restaurant = await db.orm.public.Restaurant.where({ id: restaurantId }).first();
+  if (!restaurant) return false;
+  return (await managementRole(userId, restaurant)) !== null;
+}
+
+async function managementRole(
+  userId: string,
+  restaurant: { id: string; ownerId: string }
+): Promise<"OWNER" | "MANAGER" | null> {
+  if (restaurant.ownerId === userId) return "OWNER";
+
+  const membership = await db.orm.public.RestaurantMembership.where({
+    userId,
+    restaurantId: restaurant.id,
+    status: "ACTIVE",
+  }).first();
+
+  if (membership?.role === "OWNER" || membership?.role === "MANAGER") return membership.role;
+  return null;
+}
+
 export async function requireManagedRestaurant(
   request: Request,
   restaurantId: string
@@ -44,19 +66,7 @@ export async function requireManagedRestaurant(
     throw new RestaurantError("NOT_FOUND", "Restaurant not found.");
   }
 
-  if (restaurant.ownerId === user.id) {
-    return { user, restaurant, role: "OWNER" };
-  }
-
-  const membership = await db.orm.public.RestaurantMembership.where({
-    userId: user.id,
-    restaurantId,
-    status: "ACTIVE",
-  }).first();
-
-  if (membership?.role === "OWNER" || membership?.role === "MANAGER") {
-    return { user, restaurant, role: membership.role };
-  }
-
-  throw new AuthError("FORBIDDEN", "You cannot manage this restaurant.");
+  const role = await managementRole(user.id, restaurant);
+  if (!role) throw new AuthError("FORBIDDEN", "You cannot manage this restaurant.");
+  return { user, restaurant, role };
 }

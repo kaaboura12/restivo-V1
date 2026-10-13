@@ -40,7 +40,7 @@ export function ManagerChat({
     setSending(true);
 
     try {
-      const reply = await apiAskManager(
+      const answer = await apiAskManager(
         token,
         restaurantId,
         history.map((message) => ({
@@ -50,7 +50,13 @@ export function ManagerChat({
       );
       setMessages((current) => [
         ...current,
-        { id: `assistant-${current.length}`, role: "assistant", text: reply, time: clockLabel() },
+        {
+          id: `assistant-${current.length}`,
+          role: "assistant",
+          text: answer.reply,
+          time: clockLabel(),
+          sources: answer.sources,
+        },
       ]);
     } catch (err) {
       setMessages((current) => current.filter((message) => message.id !== mine.id));
@@ -140,7 +146,25 @@ function Message({ message, ownerName }: { message: ChatMessage; ownerName: stri
           {message.text}
         </p>
         <p className="mt-1 text-[11px] text-[#A39C91]">{message.time}</p>
+        {message.sources && message.sources.length > 0 ? <Sources sources={message.sources} /> : null}
       </div>
     </div>
+  );
+}
+
+function Sources({ sources }: { sources: NonNullable<ChatMessage["sources"]> }) {
+  return (
+    <ul className="mt-2 space-y-1.5 text-left">
+      {sources.map((source) => (
+        <li key={`${source.tool}-${source.metric}`} className="rounded-xl border border-[#E5DFD3] bg-[#FAF7F2] px-3 py-2">
+          <p className="text-[10px] font-semibold tracking-wide text-[#8C877D] uppercase">{source.label}</p>
+          <p className="mt-0.5 text-[12px] font-medium text-[#1A1A1A]">{source.metric}</p>
+          {source.records.length > 0 ? (
+            <p className="mt-0.5 text-[11px] text-[#6B665E]">{source.records.join(" · ")}</p>
+          ) : null}
+          <p className="mt-0.5 text-[11px] text-[#A39C91]">{source.context}</p>
+        </li>
+      ))}
+    </ul>
   );
 }

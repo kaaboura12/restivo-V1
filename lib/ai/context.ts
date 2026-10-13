@@ -1,10 +1,8 @@
-import type { ChatTurn } from "./types";
-
-const HISTORY_TURNS = 12;
+import { CHAT_HISTORY_LIMIT, type ChatTurn } from "./types";
 
 /** Recent turns used to understand the question. Facts still come from tools. */
 export function prepareHistory(messages: ChatTurn[]): ChatTurn[] {
-  return messages.slice(-HISTORY_TURNS);
+  return messages.slice(-CHAT_HISTORY_LIMIT);
 }
 
 export function historyRule(messages: ChatTurn[]): string | null {

@@ -1,3 +1,5 @@
+import type { AnswerSource } from "./types";
+
 const MAX_STEPS = 4;
 const MAX_CALLS = 6;
 
@@ -20,10 +22,16 @@ type LoopOptions = {
   execute: (call: ToolRequest) => Promise<unknown>;
 };
 
+export type ToolLoopResult = {
+  reply: string;
+  sources: AnswerSource[];
+};
+
 /** Runs tool calls until the model answers, or a step or call limit is reached. */
-export async function runToolLoop({ messages, complete, execute }: LoopOptions): Promise<string> {
+export async function runToolLoop({ messages, complete, execute }: LoopOptions): Promise<ToolLoopResult> {
   const thread = [...messages];
   const seen = new Set<string>();
+  const sources: AnswerSource[] = [];
   let callsUsed = 0;
 
   for (let step = 0; step <= MAX_STEPS; step += 1) {
@@ -33,7 +41,7 @@ export async function runToolLoop({ messages, complete, execute }: LoopOptions):
 
     if (!allowTools || calls.length === 0) {
       const reply = visibleReply(message.content);
-      if (reply) return reply;
+      if (reply) return { reply, sources };
       break;
     }
 
@@ -51,6 +59,8 @@ export async function runToolLoop({ messages, complete, execute }: LoopOptions):
       seen.add(key);
       callsUsed += 1;
       const result = await execute(call);
+      const source = readSource(result);
+      if (source) sources.push(source);
       thread.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
     }
   }
@@ -61,7 +71,26 @@ export async function runToolLoop({ messages, complete, execute }: LoopOptions):
   );
   const reply = visibleReply(closing.content);
   if (!reply) throw new Error("EMPTY_ANSWER");
-  return reply;
+  return { reply, sources };
+}
+
+function readSource(result: unknown): AnswerSource | null {
+  if (!isRecord(result) || !isRecord(result.source)) return null;
+  const source = result.source;
+  if (typeof source.tool !== "string" || typeof source.label !== "string" || typeof source.metric !== "string") {
+    return null;
+  }
+  return {
+    tool: source.tool,
+    label: source.label,
+    metric: source.metric,
+    records: Array.isArray(source.records) ? source.records.filter((item) => typeof item === "string") : [],
+    context: typeof source.context === "string" ? source.context : "Signed-in restaurant",
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
 function note(toolCallId: string, error: string): StepMessage {

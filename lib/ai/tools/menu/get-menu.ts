@@ -21,8 +21,10 @@ async function readMenu(restaurantId: string, args: ListArgs) {
 
   return {
     found: true,
+    id: menu.id,
     name: menu.name,
     published: menu.isPublished,
+    itemCount: total,
     limit: args.limit,
     truncated: total > args.limit,
     categories: active
