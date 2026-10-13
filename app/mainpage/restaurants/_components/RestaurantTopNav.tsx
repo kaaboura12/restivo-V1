@@ -37,7 +37,9 @@ export function RestaurantTopNav() {
       ? "Tables"
       : pathname?.startsWith("/mainpage/restaurants/staff")
         ? "Staff"
-        : "Overview";
+        : pathname?.startsWith("/mainpage/restaurants/ai")
+          ? "AI Manager"
+          : "Overview";
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
