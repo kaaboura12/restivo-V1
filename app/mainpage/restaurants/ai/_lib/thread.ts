@@ -1,4 +1,4 @@
-import type { AnswerSource } from "@/lib/ai/types";
+import type { AnswerSource, FollowUp } from "@/lib/ai/types";
 
 export type ChatRole = "owner" | "assistant";
 
@@ -8,6 +8,7 @@ export type ChatMessage = {
   text: string;
   time: string;
   sources?: AnswerSource[];
+  followUps?: FollowUp[];
 };
 
 export function welcomeMessage(restaurantName: string): ChatMessage {

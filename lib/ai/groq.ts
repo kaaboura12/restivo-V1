@@ -1,9 +1,10 @@
 import { RestaurantError } from "@/lib/restaurants/errors";
 import { historyRule, prepareHistory } from "./context";
+import { suggestFollowUps } from "./follow-ups";
 import { runToolLoop, type StepMessage, type ToolRequest } from "./loop";
 import { managerPrompt } from "./prompt";
 import { groqTools, runManagerTool } from "./tools";
-import type { AnswerSource, ChatTurn } from "./types";
+import type { AnswerSource, ChatTurn, FollowUp } from "./types";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
@@ -29,7 +30,7 @@ export async function completeManagerChat(
   restaurantId: string,
   restaurantName: string,
   messages: ChatTurn[]
-): Promise<{ reply: string; sources: AnswerSource[] }> {
+): Promise<{ reply: string; sources: AnswerSource[]; followUps: FollowUp[] }> {
   const key = groqKey();
   if (!key) throw new RestaurantError("INTERNAL_ERROR", "The assistant is not configured.");
   const model = process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL;
@@ -37,7 +38,7 @@ export async function completeManagerChat(
   const history = prepareHistory(messages);
 
   try {
-    return await runToolLoop({
+    const result = await runToolLoop({
       messages: [
         { role: "system", content: managerPrompt(restaurantName, historyRule(history)) },
         ...history.map((message) => ({ role: message.role, content: message.content })),
@@ -45,6 +46,7 @@ export async function completeManagerChat(
       complete: (thread, allowTools) => createCompletion(key, model, thread, allowTools),
       execute: (call) => runManagerTool(call.name, { userId, restaurantId }, call.arguments),
     });
+    return { reply: result.reply, sources: result.sources, followUps: suggestFollowUps(result.lookups) };
   } catch (err) {
     if (err instanceof RestaurantError) throw err;
     throw new RestaurantError("INTERNAL_ERROR", "The assistant could not answer.");

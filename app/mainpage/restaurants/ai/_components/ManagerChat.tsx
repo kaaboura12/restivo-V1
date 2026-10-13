@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiAskManager } from "@/lib/ai/client";
+import { STARTER_FOLLOW_UPS } from "@/lib/ai/follow-ups";
+import type { FollowUp } from "@/lib/ai/types";
 import { profileInitials } from "../../../_lib/profile";
 import { clockLabel, welcomeMessage, type ChatMessage } from "../_lib/thread";
+import { FollowUps } from "./FollowUps";
 
 export function ManagerChat({
   restaurantId,
@@ -27,15 +30,15 @@ export function ManagerChat({
     endRef.current?.scrollIntoView({ block: "end" });
   }, [messages, sending]);
 
-  const send = async () => {
-    const text = draft.trim();
+  const ask = async (text: string, fromComposer = false) => {
+    const question = text.trim();
     const token = getAccessToken();
-    if (!text || sending || !token) return;
+    if (!question || sending || !token) return;
 
-    const mine: ChatMessage = { id: `owner-${messages.length}`, role: "owner", text, time: clockLabel() };
+    const mine: ChatMessage = { id: `owner-${messages.length}`, role: "owner", text: question, time: clockLabel() };
     const history = [...messages.filter((message) => message.id !== "welcome"), mine];
     setMessages((current) => [...current, mine]);
-    setDraft("");
+    if (fromComposer) setDraft("");
     setError(null);
     setSending(true);
 
@@ -56,16 +59,19 @@ export function ManagerChat({
           text: answer.reply,
           time: clockLabel(),
           sources: answer.sources,
+          followUps: answer.followUps,
         },
       ]);
     } catch (err) {
       setMessages((current) => current.filter((message) => message.id !== mine.id));
-      setDraft(text);
+      if (fromComposer) setDraft(question);
       setError(err instanceof Error ? err.message : "The assistant could not answer.");
     } finally {
       setSending(false);
     }
   };
+
+  const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#E5DFD3] bg-white shadow-sm">
@@ -76,7 +82,14 @@ export function ManagerChat({
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-[#F7F4EE] px-4 py-5 sm:px-5">
         {messages.map((message) => (
-          <Message key={message.id} message={message} ownerName={ownerName} />
+          <Message
+            key={message.id}
+            message={message}
+            ownerName={ownerName}
+            steps={message.id === lastAssistant?.id ? stepsFor(message) : []}
+            stepsDisabled={sending}
+            onAsk={(prompt) => void ask(prompt)}
+          />
         ))}
         {sending ? <Pending /> : null}
         <div ref={endRef} />
@@ -86,7 +99,7 @@ export function ManagerChat({
         className="border-t border-[#E5DFD3] px-4 py-3"
         onSubmit={(event) => {
           event.preventDefault();
-          void send();
+          void ask(draft, true);
         }}
       >
         {error ? <p className="mb-2 text-[13px] font-medium text-[#B55234]">{error}</p> : null}
@@ -125,7 +138,24 @@ function Pending() {
   );
 }
 
-function Message({ message, ownerName }: { message: ChatMessage; ownerName: string }) {
+function stepsFor(message: ChatMessage): FollowUp[] {
+  if (message.followUps && message.followUps.length > 0) return message.followUps;
+  return message.id === "welcome" ? STARTER_FOLLOW_UPS : [];
+}
+
+function Message({
+  message,
+  ownerName,
+  steps,
+  stepsDisabled,
+  onAsk,
+}: {
+  message: ChatMessage;
+  ownerName: string;
+  steps: FollowUp[];
+  stepsDisabled: boolean;
+  onAsk: (prompt: string) => void;
+}) {
   const mine = message.role === "owner";
 
   return (
@@ -147,6 +177,7 @@ function Message({ message, ownerName }: { message: ChatMessage; ownerName: stri
         </p>
         <p className="mt-1 text-[11px] text-[#A39C91]">{message.time}</p>
         {message.sources && message.sources.length > 0 ? <Sources sources={message.sources} /> : null}
+        <FollowUps items={steps} disabled={stepsDisabled} onAsk={onAsk} />
       </div>
     </div>
   );

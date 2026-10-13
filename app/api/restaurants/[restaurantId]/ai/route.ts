@@ -12,8 +12,8 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     const { restaurantId } = await context.params;
     const { user, restaurant } = await requireManagedRestaurant(request, restaurantId);
     const { messages } = await parseChatBody(request);
-    const { reply, sources } = await completeManagerChat(user.id, restaurant.id, restaurant.name, messages);
-    return Response.json({ ok: true, reply, sources });
+    const { reply, sources, followUps } = await completeManagerChat(user.id, restaurant.id, restaurant.name, messages);
+    return Response.json({ ok: true, reply, sources, followUps });
   } catch (err) {
     return toRestaurantErrorResponse(err);
   }

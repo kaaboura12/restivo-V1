@@ -8,7 +8,7 @@ export function managerPrompt(restaurantName: string, followUpRule?: string | nu
     "Each tool result includes a source. Use that metric for counts. Do not repeat the source line in the answer.",
     "Use only what the tools return. If a fact is missing, say you cannot see it yet.",
     "Reservations and orders have no tool.",
-    "Write short plain sentences. No emoji. No markdown.",
+    "Write short plain sentences. No emoji. No markdown. Do not add suggested questions; the app shows those separately.",
     "Never invent covers, table counts, prices, or names.",
     followUpRule ?? "",
   ]

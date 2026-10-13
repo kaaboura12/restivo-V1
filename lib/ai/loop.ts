@@ -1,3 +1,4 @@
+import type { ToolLookup } from "./follow-ups";
 import type { AnswerSource } from "./types";
 
 const MAX_STEPS = 4;
@@ -25,6 +26,7 @@ type LoopOptions = {
 export type ToolLoopResult = {
   reply: string;
   sources: AnswerSource[];
+  lookups: ToolLookup[];
 };
 
 /** Runs tool calls until the model answers, or a step or call limit is reached. */
@@ -32,6 +34,7 @@ export async function runToolLoop({ messages, complete, execute }: LoopOptions):
   const thread = [...messages];
   const seen = new Set<string>();
   const sources: AnswerSource[] = [];
+  const lookups: ToolLookup[] = [];
   let callsUsed = 0;
 
   for (let step = 0; step <= MAX_STEPS; step += 1) {
@@ -41,7 +44,7 @@ export async function runToolLoop({ messages, complete, execute }: LoopOptions):
 
     if (!allowTools || calls.length === 0) {
       const reply = visibleReply(message.content);
-      if (reply) return { reply, sources };
+      if (reply) return { reply, sources, lookups };
       break;
     }
 
@@ -60,7 +63,11 @@ export async function runToolLoop({ messages, complete, execute }: LoopOptions):
       callsUsed += 1;
       const result = await execute(call);
       const source = readSource(result);
-      if (source) sources.push(source);
+      if (source) {
+        sources.push(source);
+        const data = readData(result);
+        if (data !== undefined) lookups.push({ tool: source.tool, data });
+      }
       thread.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
     }
   }
@@ -71,7 +78,12 @@ export async function runToolLoop({ messages, complete, execute }: LoopOptions):
   );
   const reply = visibleReply(closing.content);
   if (!reply) throw new Error("EMPTY_ANSWER");
-  return { reply, sources };
+  return { reply, sources, lookups };
+}
+
+function readData(result: unknown): unknown | undefined {
+  if (!isRecord(result) || !("data" in result)) return undefined;
+  return result.data;
 }
 
 function readSource(result: unknown): AnswerSource | null {
