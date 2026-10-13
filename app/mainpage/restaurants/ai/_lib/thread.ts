@@ -11,7 +11,7 @@ export function welcomeMessage(restaurantName: string): ChatMessage {
   return {
     id: "welcome",
     role: "assistant",
-    text: `Ask me about ${restaurantName}. I can help with service, the floor, the menu, and the team.`,
+    text: `Ask me about ${restaurantName}. I can look up the venue, the floor, the menu, and the team.`,
     time: clockLabel(),
   };
 }
